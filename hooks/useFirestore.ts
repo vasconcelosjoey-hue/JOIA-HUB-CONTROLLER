@@ -8,7 +8,6 @@ import {
     updateDoc, 
     addDoc,
     query,
-    orderBy
 } from 'firebase/firestore';
 import { db } from '../services/firebase';
 
@@ -36,17 +35,19 @@ export function useFirestoreCollection<T extends { id: string }>(collectionName:
 
     const addItem = async (item: Omit<T, 'id'> | T) => {
         // If item has an ID, use setDoc to force that ID, otherwise addDoc
-        if ('id' in item && item.id) {
+        if ('id' in item && (item as any).id) {
              const { id, ...rest } = item as any;
              await setDoc(doc(db, collectionName, id), rest);
         } else {
-             await addDoc(collection(db, collectionName), item);
+             // Cast item to any to avoid strict type mismatch with DocumentData
+             await addDoc(collection(db, collectionName), item as any);
         }
     };
 
     const updateItem = async (id: string, updates: Partial<T>) => {
         const ref = doc(db, collectionName, id);
-        await updateDoc(ref, updates);
+        // Cast updates to any to resolve TS2345 build error
+        await updateDoc(ref, updates as any);
     };
 
     const deleteItem = async (id: string) => {
