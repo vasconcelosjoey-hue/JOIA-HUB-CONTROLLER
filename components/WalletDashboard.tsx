@@ -94,11 +94,12 @@ interface DetailedSectionProps {
     focusId?: string | null;
     catId?: string;
     customHeaderAction?: React.ReactNode;
+    showDate?: boolean;
 }
 
 const DetailedSection: React.FC<DetailedSectionProps> = ({
     listId, title, icon, items, totalValue, onAddItem, onRemoveItem, onUpdateItem, onDuplicateItem,
-    onDragStart, onDragOver, onDrop, theme, variant, titleEditable, onTitleChange, focusId, customHeaderAction
+    onDragStart, onDragOver, onDrop, theme, variant, titleEditable, onTitleChange, focusId, customHeaderAction, showDate = false
 }) => {
     // Theme colors
     const themeColors: Record<string, string> = {
@@ -162,8 +163,10 @@ const DetailedSection: React.FC<DetailedSectionProps> = ({
                             )}
                             
                             <div className="flex-1 min-w-0 grid grid-cols-12 gap-2 items-center">
-                                {/* Name & Details - REFACTORED TO TAKE UP DATE SPACE */}
-                                <div className="col-span-8">
+                                {/* Name & Details */}
+                                {/* IF showDate: Name 6 cols, Date 3 cols, Value 3 cols */}
+                                {/* IF !showDate: Name 8 cols, Value 4 cols */}
+                                <div className={showDate ? "col-span-6" : "col-span-8"}>
                                     <input 
                                         type="text" 
                                         value={item.name} 
@@ -181,8 +184,21 @@ const DetailedSection: React.FC<DetailedSectionProps> = ({
                                     />
                                 </div>
 
+                                {/* Date Input - Only shown in Controller Mode */}
+                                {showDate && (
+                                    <div className="col-span-3">
+                                        <input 
+                                            type="text" 
+                                            value={item.date} 
+                                            onChange={(e) => onUpdateItem(item.id, 'date', e.target.value)}
+                                            className="font-medium text-[10px] text-center text-gray-500 bg-gray-50/50 rounded-md py-1 outline-none w-full placeholder:text-gray-300"
+                                            placeholder="Data"
+                                        />
+                                    </div>
+                                )}
+
                                 {/* Value - No Spinners (Handled in CSS) */}
-                                <div className="col-span-4 flex items-center justify-end gap-1">
+                                <div className={showDate ? "col-span-3 flex items-center justify-end gap-1" : "col-span-4 flex items-center justify-end gap-1"}>
                                     <span className="text-[10px] text-gray-400 font-bold">R$</span>
                                     <input 
                                         type="number" 
@@ -359,7 +375,7 @@ const WalletReports: React.FC<WalletReportsProps> = ({ data, onClose, monthName 
 };
 
 export const WalletDashboard: React.FC = () => {
-    // UPDATED KEY TO v12
+    // IMPORTANT: Maintaining v12 key to avoid data loss on this deploy
     const [state, setState] = useLocalStorage<DashboardState>('joia_wallet_v12_system', INITIAL_STATE);
     const [smartCommand, setSmartCommand] = useState('');
     const [lastAction, setLastAction] = useState<string | null>(null);
@@ -942,6 +958,7 @@ export const WalletDashboard: React.FC = () => {
                         onDrop={handleDrop}
                         theme="green"
                         focusId={focusId}
+                        showDate={state.mode === 'CONTROLLER'}
                     />
                 </div>
 
@@ -995,6 +1012,7 @@ export const WalletDashboard: React.FC = () => {
                                         </button>
                                     </div>
                                 }
+                                showDate={state.mode === 'CONTROLLER'}
                             />
                         </div>
                     ))}
@@ -1016,6 +1034,7 @@ export const WalletDashboard: React.FC = () => {
                     theme="purple"
                     variant="compact"
                     focusId={focusId}
+                    showDate={state.mode === 'CONTROLLER'}
                 />
 
                 <DetailedSection 
@@ -1031,6 +1050,7 @@ export const WalletDashboard: React.FC = () => {
                     theme="gray"
                     variant="compact"
                     focusId={focusId}
+                    showDate={state.mode === 'CONTROLLER'}
                 />
             </div>
 
