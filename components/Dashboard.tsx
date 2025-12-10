@@ -1,13 +1,12 @@
 import React, { useState, useRef } from 'react';
-import { PROJECTS } from '../constants';
 import { Project } from '../types';
 import { formatCurrency, getStatusColor, formatDate, extractDominantColor } from '../services/utils';
 import { Briefcase, Building2, User, Phone, Calendar, Plus, X, MapPin, FileText, Pencil, Upload, Palette, Globe, Check, Navigation, Trash2, MessageCircle, ExternalLink } from 'lucide-react';
-import { useLocalStorage } from '../hooks/useLocalStorage';
+import { useFirestoreCollection } from '../hooks/useFirestore';
 
 export const Dashboard: React.FC = () => {
-  // Projects State (Persisted)
-  const [projects, setProjects] = useLocalStorage<Project[]>('joia_projects', PROJECTS);
+  // Projects State (Real-time Firestore)
+  const { data: projects, addItem, updateItem, deleteItem } = useFirestoreCollection<Project>('projects');
   
   const [isAdding, setIsAdding] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
@@ -23,7 +22,7 @@ export const Dashboard: React.FC = () => {
   // Logo Upload Ref
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleAddProject = () => {
+  const handleAddProject = async () => {
     if (!newName) return;
 
     const newProject: Project = {
@@ -40,7 +39,7 @@ export const Dashboard: React.FC = () => {
         address: ''
     };
 
-    setProjects([...(projects || []), newProject]);
+    await addItem(newProject);
     setIsAdding(false);
     resetForm();
   };
@@ -49,23 +48,20 @@ export const Dashboard: React.FC = () => {
     setNewName(''); setNewCNPJ(''); setNewSupervisor(''); setNewContact(''); setNewStartDate(''); setNewVal('');
   };
 
-  const handleDeleteProject = (id: string, e: React.MouseEvent) => {
-      // Impede que o clique na lixeira abra o modal do projeto
+  const handleDeleteProject = async (id: string, e: React.MouseEvent) => {
       e.stopPropagation(); 
-      
-      // Confirmação explícita
       const confirmDelete = window.confirm(
           "⚠️ AÇÃO IRREVERSÍVEL\n\nDeseja realmente EXCLUIR este projeto e todos os seus dados?\nClique em 'OK' para confirmar ou 'Cancelar' para voltar."
       );
 
       if (confirmDelete) {
-          setProjects((projects || []).filter(p => p.id !== id));
+          await deleteItem(id);
       }
   };
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
       if (!editingProject) return;
-      setProjects((projects || []).map(p => p.id === editingProject.id ? editingProject : p));
+      await updateItem(editingProject.id, editingProject);
       setEditingProject(null);
   };
 
@@ -81,7 +77,7 @@ export const Dashboard: React.FC = () => {
               setEditingProject({
                   ...editingProject,
                   logo: result,
-                  brandColor: autoColor // Set automatically
+                  brandColor: autoColor 
               });
           };
           reader.readAsDataURL(file);
@@ -107,7 +103,6 @@ export const Dashboard: React.FC = () => {
       window.open(finalUrl, '_blank');
   }
 
-  // Safety check for null/undefined projects
   const safeProjects = Array.isArray(projects) ? projects : [];
 
   return (

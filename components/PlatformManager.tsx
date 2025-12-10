@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Layers, Plus, Trash2, Calendar, User, Search } from 'lucide-react';
 import { formatCurrency } from '../services/utils';
-import { useLocalStorage } from '../hooks/useLocalStorage';
+import { useFirestoreCollection } from '../hooks/useFirestore';
 
 interface Platform {
     id: string;
@@ -11,18 +11,17 @@ interface Platform {
     dueDate: number;
 }
 
-// Initial empty data
-const INITIAL_PLATFORMS: Platform[] = [];
-
 export const PlatformManager: React.FC = () => {
-    const [platforms, setPlatforms] = useLocalStorage<Platform[]>('joia_platforms', INITIAL_PLATFORMS);
+    // Switch to Firestore
+    const { data: platforms, addItem, deleteItem } = useFirestoreCollection<Platform>('platforms');
+    
     const [newName, setNewName] = useState('');
     const [newClient, setNewClient] = useState('');
     const [newValue, setNewValue] = useState('');
     const [newDate, setNewDate] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
 
-    const handleAdd = () => {
+    const handleAdd = async () => {
         if (!newName || !newClient || !newValue || !newDate) return;
         const newPlat: Platform = {
             id: Date.now().toString(),
@@ -31,16 +30,16 @@ export const PlatformManager: React.FC = () => {
             value: parseFloat(newValue),
             dueDate: parseInt(newDate)
         };
-        setPlatforms([...platforms, newPlat]);
+        await addItem(newPlat);
         setNewName('');
         setNewClient('');
         setNewValue('');
         setNewDate('');
     };
 
-    const handleDelete = (id: string) => {
+    const handleDelete = async (id: string) => {
         if (window.confirm('Tem certeza que deseja apagar este registro?')) {
-            setPlatforms(platforms.filter(p => p.id !== id));
+            await deleteItem(id);
         }
     };
 
@@ -49,7 +48,6 @@ export const PlatformManager: React.FC = () => {
         p.client.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    // Soma inteligente: calcula baseada na lista filtrada, não na original
     const totalCost = filteredPlatforms.reduce((acc, curr) => acc + curr.value, 0);
 
     return (

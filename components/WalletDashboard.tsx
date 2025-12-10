@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { useLocalStorage } from '../hooks/useLocalStorage';
+import { useFirestoreDocument } from '../hooks/useFirestore';
 import { Plus, Trash2, TrendingUp, CreditCard, Target, Wallet, ArrowRight, Sparkles, TrendingDown, Layout, Edit3, X, GripVertical, AlertCircle, Copy, Check, Settings, Infinity, BarChart3, ChevronLeft, ChevronRight, Calendar, PieChart, ArrowUpRight, ArrowDownRight, LayoutGrid, Clipboard } from 'lucide-react';
 import { formatCurrency } from '../services/utils';
 
@@ -378,9 +378,39 @@ const WalletReports: React.FC<WalletReportsProps> = ({ data, onClose, monthName 
     );
 };
 
-export const WalletDashboard: React.FC = () => {
-    // IMPORTANT: Maintaining v12 key to avoid data loss on this deploy
-    const [state, setState] = useLocalStorage<DashboardState>('joia_wallet_v12_system', INITIAL_STATE);
+// Props for the main export
+interface WalletDashboardProps {
+    walletId: string;
+    walletName: string;
+}
+
+export const WalletDashboard: React.FC<WalletDashboardProps> = ({ walletId, walletName }) => {
+    // IMPORTANT: Replaced useLocalStorage with Firestore document synchronization
+    // We listen to the specific wallet document.
+    // The data is stored in a field called 'dashboardData'.
+    
+    // Structure expected in Firestore: wallets/{walletId} -> { ..., dashboardData: DashboardState }
+    
+    // Wrapper to match hook signature
+    const { data: walletDoc, setDocument } = useFirestoreDocument<{ dashboardData: DashboardState }>(
+        'wallets', 
+        walletId, 
+        { dashboardData: INITIAL_STATE }
+    );
+    
+    const state = walletDoc?.dashboardData || INITIAL_STATE;
+    
+    const setState = (newStateOrFn: DashboardState | ((prev: DashboardState) => DashboardState)) => {
+        let newState: DashboardState;
+        if (typeof newStateOrFn === 'function') {
+            newState = newStateOrFn(state);
+        } else {
+            newState = newStateOrFn;
+        }
+        // Save back to Firestore
+        setDocument({ dashboardData: newState });
+    };
+
     const [smartCommand, setSmartCommand] = useState('');
     const [lastAction, setLastAction] = useState<string | null>(null);
     const [showReports, setShowReports] = useState(false);
@@ -781,6 +811,23 @@ export const WalletDashboard: React.FC = () => {
 
     return (
         <div className="max-w-7xl mx-auto space-y-4 pb-24 font-sans px-2 sm:px-0">
+            {/* Display Wallet Name in Header */}
+            <div className="bg-black/90 backdrop-blur text-white px-4 py-3 rounded-2xl flex items-center justify-between shadow-lg mb-2">
+                <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+                        <Wallet size={16} />
+                    </div>
+                    <div>
+                         <p className="text-[10px] font-bold uppercase text-white/60">Carteira Ativa</p>
+                         <p className="font-black text-sm">{walletName}</p>
+                    </div>
+                </div>
+                <div className="text-right">
+                    <span className="text-[10px] font-bold text-emerald-400 uppercase flex items-center gap-1 justify-end">
+                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></div> Online
+                    </span>
+                </div>
+            </div>
             
             {showReports && (
                 <WalletReports 

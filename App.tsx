@@ -8,12 +8,9 @@ import { NotificationCenter, AlertItem } from './components/NotificationCenter';
 import { WalletLogin } from './components/WalletLogin';
 import { LayoutGrid, CalendarPlus, ArrowLeft, Hexagon, CreditCard, Bell, Bot, Layers, Wallet } from 'lucide-react';
 import { PartnershipCard } from './types';
-import { useLocalStorage } from './hooks/useLocalStorage';
+import { useFirestoreCollection } from './hooks/useFirestore';
 import { getAlertLevel } from './services/utils';
 import { NeuralCore } from './components/ui/NeuralCore';
-
-// Initial Empty Data for Partnerships (Clean Slate)
-const INITIAL_PARTNERSHIPS: PartnershipCard[] = [];
 
 type View = 'hub' | 'dashboard' | 'meetings' | 'alerts' | 'ai-tools' | 'platforms' | 'wallet' | 'partnership';
 
@@ -24,13 +21,10 @@ function App() {
   const [isAlertsOpen, setIsAlertsOpen] = useState(false);
   const [activeAlerts, setActiveAlerts] = useState<AlertItem[]>([]);
   
-  // Data Fetching for Alerts (Reading from LocalStorage to generate centralized alerts)
-  // Partnerships
-  const [partnershipCards, setPartnershipCards] = useLocalStorage<PartnershipCard[]>('joia_partnerships', INITIAL_PARTNERSHIPS);
-  // AI Tools (Need to match key used in AIToolsManager)
-  const [aiTools] = useLocalStorage<any[]>('joia_aitools', []);
-  // Platforms (Need to match key used in PlatformManager)
-  const [platforms] = useLocalStorage<any[]>('joia_platforms', []);
+  // Data Fetching for Alerts (Reading from Firestore)
+  const { data: partnershipCards } = useFirestoreCollection<PartnershipCard>('partnerships');
+  const { data: aiTools } = useFirestoreCollection<any>('ai_tools');
+  const { data: platforms } = useFirestoreCollection<any>('platforms');
 
   // Animation state
   const [isTransitioning, setIsTransitioning] = useState(false);
@@ -39,10 +33,8 @@ function App() {
   useEffect(() => {
       const generatedAlerts: AlertItem[] = [];
 
-      // SAFETY CHECKS ADDED: Ensure arrays exist before iterating to prevent White Screen of Death
-
       // 1. Check Partnerships
-      if (Array.isArray(partnershipCards) && partnershipCards.length > 0) {
+      if (partnershipCards.length > 0) {
         partnershipCards.forEach(card => {
             if (!card) return;
             const level = getAlertLevel(card.dueDay);
@@ -60,9 +52,8 @@ function App() {
       }
 
       // 2. Check AI Tools
-      if (Array.isArray(aiTools) && aiTools.length > 0) {
-        aiTools.forEach(tool => {
-            // Assuming tool has { id, name, value, dueDate }
+      if (aiTools.length > 0) {
+        aiTools.forEach((tool: any) => {
             if (tool && tool.dueDate) {
               const level = getAlertLevel(tool.dueDate);
               if (level) {
@@ -80,9 +71,8 @@ function App() {
       }
 
       // 3. Check Platforms
-      if (Array.isArray(platforms) && platforms.length > 0) {
-        platforms.forEach(plat => {
-            // Assuming plat has { id, name, value, dueDate, client }
+      if (platforms.length > 0) {
+        platforms.forEach((plat: any) => {
             if (plat && plat.dueDate) {
                 const level = getAlertLevel(plat.dueDate);
                 if (level) {
@@ -116,16 +106,6 @@ function App() {
       setIsTransitioning(true);
       setCurrentView(view);
       setTimeout(() => setIsTransitioning(false), 600);
-  };
-
-  const handleAddPartnership = (newCard: PartnershipCard) => {
-      setPartnershipCards([...(Array.isArray(partnershipCards) ? partnershipCards : []), newCard]);
-  };
-
-  const handleDeletePartnership = (id: string) => {
-      if (Array.isArray(partnershipCards)) {
-          setPartnershipCards(partnershipCards.filter(c => c.id !== id));
-      }
   };
 
   // --- COMPONENTS FOR HUB BUTTONS (Reused for Mobile/Desktop) ---
@@ -281,9 +261,9 @@ function App() {
                 {currentView === 'platforms' && <PlatformManager />}
                 {currentView === 'partnership' && (
                     <PartnershipManager 
-                        cards={Array.isArray(partnershipCards) ? partnershipCards : []} 
-                        onAddCard={handleAddPartnership} 
-                        onDeleteCard={handleDeletePartnership} 
+                        cards={[]} 
+                        onAddCard={() => {}} 
+                        onDeleteCard={() => {}} 
                     />
                 )}
                 {currentView === 'wallet' && <WalletLogin />}

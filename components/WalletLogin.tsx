@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Wallet, ArrowRight, Lock, CheckCircle2, UserPlus, LogIn, ChevronRight, KeyRound, Eye, EyeOff, ShieldCheck } from 'lucide-react';
-import { useLocalStorage } from '../hooks/useLocalStorage';
+import { useFirestoreCollection } from '../hooks/useFirestore';
 import { WalletDashboard } from './WalletDashboard';
 
 // --- Types ---
 interface WalletProfile {
     id: string;
     name: string;
-    pin: string; // Simple 6-char alphanumeric pin
+    pin: string; 
     balance: number;
 }
 
@@ -16,7 +16,9 @@ type ScreenView = 'menu' | 'login-select' | 'login-input' | 'create-name' | 'cre
 export const WalletLogin: React.FC = () => {
     // --- State ---
     const [view, setView] = useState<ScreenView>('menu');
-    const [wallets, setWallets] = useLocalStorage<WalletProfile[]>('joia_wallets_v3', []); // Updated version key
+    
+    // Switch to Firestore Hook
+    const { data: wallets, addItem: addWallet } = useFirestoreCollection<WalletProfile>('wallets');
     
     // Login State
     const [selectedWallet, setSelectedWallet] = useState<WalletProfile | null>(null);
@@ -32,20 +34,21 @@ export const WalletLogin: React.FC = () => {
 
     // --- Actions ---
 
-    const handleCreateWallet = () => {
+    const handleCreateWallet = async () => {
         if (newWalletPin.length < 4) {
             setErrorMsg("Mínimo 4 caracteres.");
             return;
         }
 
+        const newId = Date.now().toString();
         const newWallet: WalletProfile = {
-            id: Date.now().toString(),
+            id: newId,
             name: newWalletName,
             pin: newWalletPin,
             balance: 0
         };
 
-        setWallets([...wallets, newWallet]);
+        await addWallet(newWallet);
         setSelectedWallet(newWallet);
         setView('success');
     };
@@ -74,8 +77,9 @@ export const WalletLogin: React.FC = () => {
 
     // --- RENDERERS ---
 
-    if (view === 'dashboard') {
-        return <WalletDashboard />;
+    if (view === 'dashboard' && selectedWallet) {
+        // Pass the wallet ID so Dashboard knows where to sync data
+        return <WalletDashboard walletId={selectedWallet.id} walletName={selectedWallet.name} />;
     }
 
     if (view === 'success') {

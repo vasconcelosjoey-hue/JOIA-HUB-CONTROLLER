@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Bot, Plus, Trash2, Calendar, DollarSign } from 'lucide-react';
 import { formatCurrency } from '../services/utils';
-import { useLocalStorage } from '../hooks/useLocalStorage';
+import { useFirestoreCollection } from '../hooks/useFirestore';
 import { CpuArchitecture } from './ui/cpu-architecture';
 
 interface Tool {
@@ -11,16 +11,15 @@ interface Tool {
     dueDate: number;
 }
 
-// Initial empty array for clean slate
-const INITIAL_TOOLS: Tool[] = [];
-
 export const AIToolsManager: React.FC = () => {
-    const [tools, setTools] = useLocalStorage<Tool[]>('joia_aitools', INITIAL_TOOLS);
+    // Switch to Firestore
+    const { data: tools, addItem, deleteItem } = useFirestoreCollection<Tool>('ai_tools');
+    
     const [newName, setNewName] = useState('');
     const [newValue, setNewValue] = useState('');
     const [newDate, setNewDate] = useState('');
 
-    const handleAdd = () => {
+    const handleAdd = async () => {
         if (!newName || !newValue || !newDate) return;
         const newTool: Tool = {
             id: Date.now().toString(),
@@ -28,15 +27,15 @@ export const AIToolsManager: React.FC = () => {
             value: parseFloat(newValue),
             dueDate: parseInt(newDate)
         };
-        setTools([...tools, newTool]);
+        await addItem(newTool);
         setNewName('');
         setNewValue('');
         setNewDate('');
     };
 
-    const handleDelete = (id: string) => {
+    const handleDelete = async (id: string) => {
         if (window.confirm('Tem certeza que deseja remover esta ferramenta?')) {
-            setTools(tools.filter(t => t.id !== id));
+            await deleteItem(id);
         }
     };
 

@@ -2,14 +2,19 @@ import React, { useState } from 'react';
 import { Users, Plus, Trash2, Calculator, AlertTriangle, CheckCircle2, DollarSign, Building2, Save, Calendar } from 'lucide-react';
 import { formatCurrency } from '../services/utils';
 import { Partner, PartnershipCard } from '../types';
+import { useFirestoreCollection } from '../hooks/useFirestore';
 
 interface PartnershipManagerProps {
-    cards: PartnershipCard[];
+    cards: PartnershipCard[]; // Keep for compatibility if needed, but we'll use the hook internally
     onAddCard: (card: PartnershipCard) => void;
     onDeleteCard: (id: string) => void;
 }
 
-export const PartnershipManager: React.FC<PartnershipManagerProps> = ({ cards, onAddCard, onDeleteCard }) => {
+// Rewriting to use internal hook instead of props for data source to ensure consistency with other modules
+export const PartnershipManager: React.FC<PartnershipManagerProps> = () => {
+    // Switch to Firestore
+    const { data: cards, addItem, deleteItem } = useFirestoreCollection<PartnershipCard>('partnerships');
+
     // Form States
     const [companyName, setCompanyName] = useState('');
     const [totalValue, setTotalValue] = useState<string>('');
@@ -62,7 +67,7 @@ export const PartnershipManager: React.FC<PartnershipManagerProps> = ({ cards, o
         setPartners(newPartners);
     };
 
-    const handleSaveCard = () => {
+    const handleSaveCard = async () => {
         if (!companyName || numericTotal <= 0 || !isBalanced || !dueDay) return;
         
         const newCard: PartnershipCard = {
@@ -73,7 +78,7 @@ export const PartnershipManager: React.FC<PartnershipManagerProps> = ({ cards, o
             partners: [...partners] // Copy
         };
 
-        onAddCard(newCard);
+        await addItem(newCard);
         
         // Reset Form
         setCompanyName('');
@@ -82,9 +87,9 @@ export const PartnershipManager: React.FC<PartnershipManagerProps> = ({ cards, o
         setPartners([{ id: Date.now().toString(), name: '', value: 0 }]);
     };
 
-    const handleConfirmDelete = (id: string) => {
+    const handleConfirmDelete = async (id: string) => {
         if (window.confirm('Tem certeza que deseja apagar este contrato de parceria?')) {
-            onDeleteCard(id);
+            await deleteItem(id);
         }
     }
 
