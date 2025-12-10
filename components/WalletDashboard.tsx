@@ -112,7 +112,7 @@ const DetailedSection: React.FC<DetailedSectionProps> = ({
     const activeTheme = themeColors[theme] || themeColors.gray;
 
     return (
-        // REMOVED fixed height classes to allow auto-growth
+        // Auto-growing container (no fixed height)
         <div className={`bg-white rounded-2xl p-4 shadow-sm border border-gray-200 flex flex-col relative transition-all duration-300 ease-in-out`}>
             {/* Header */}
             <div className="flex justify-between items-center mb-3 pb-2 border-b border-gray-100">
@@ -363,8 +363,8 @@ const WalletReports: React.FC<WalletReportsProps> = ({ data, onClose, monthName 
 };
 
 export const WalletDashboard: React.FC = () => {
-    // New storage key for the V9 architecture
-    const [state, setState] = useLocalStorage<DashboardState>('joia_wallet_v9_system', INITIAL_STATE);
+    // UPDATED KEY TO v11 to fix white screen crash from corrupted state
+    const [state, setState] = useLocalStorage<DashboardState>('joia_wallet_v11_system', INITIAL_STATE);
     const [smartCommand, setSmartCommand] = useState('');
     const [lastAction, setLastAction] = useState<string | null>(null);
     const [showReports, setShowReports] = useState(false);
@@ -382,16 +382,21 @@ export const WalletDashboard: React.FC = () => {
     const activeKey = getControllerKey(state.currentYear, state.currentMonth);
 
     const data: WalletData = useMemo(() => {
-        if (state.mode === 'CONTINUUM') {
-            return state.continuum;
+        // Robust safety checks for data integrity
+        const safeState = state || INITIAL_STATE;
+        const currentMode = safeState.mode || 'CONTINUUM';
+        
+        if (currentMode === 'CONTINUUM') {
+            return safeState.continuum || EMPTY_WALLET_DATA;
         } else {
+            // Ensure controller structure exists
+            const ctrl = safeState.controller || {};
             // Return existing month data or empty template
-            return state.controller[activeKey] || EMPTY_WALLET_DATA;
+            return ctrl[activeKey] || EMPTY_WALLET_DATA;
         }
-    }, [state.mode, state.continuum, state.controller, activeKey]);
+    }, [state, activeKey]);
 
     // --- Helper: Update Active Data ---
-    // This function abstracts the logic of saving to the correct store (Continuum vs Specific Month)
     const updateActiveData = (newData: WalletData) => {
         setState(prev => {
             if (prev.mode === 'CONTINUUM') {
