@@ -147,12 +147,19 @@ export const PartnershipManager: React.FC<PartnershipManagerProps> = () => {
                                 <label className="text-xs font-bold text-gray-500 uppercase ml-1">Dia Pagamento</label>
                                 <div className="relative">
                                     <input 
-                                        type="number"
-                                        min="1"
-                                        max="31"
+                                        type="text"
+                                        inputMode="numeric"
+                                        maxLength={2}
                                         value={dueDay}
-                                        onChange={e => setDueDay(e.target.value)}
-                                        placeholder="Dia (1-31)"
+                                        onChange={e => {
+                                            const val = e.target.value.replace(/\D/g, '');
+                                            if (val.length <= 2) {
+                                                if (!val || parseInt(val) <= 31) {
+                                                    setDueDay(val);
+                                                }
+                                            }
+                                        }}
+                                        placeholder="DD"
                                         className="w-full bg-gray-50 border border-gray-300 rounded-xl pl-10 pr-4 py-3.5 text-black font-bold focus:ring-2 focus:ring-black focus:outline-none transition-all"
                                     />
                                     <Calendar size={18} className="absolute left-3.5 top-3.5 text-gray-400" />

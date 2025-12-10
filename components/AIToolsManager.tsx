@@ -88,12 +88,20 @@ export const AIToolsManager: React.FC = () => {
                             <div className="space-y-2">
                                 <label className="text-xs font-bold text-gray-500 uppercase">Dia Venc.</label>
                                 <input 
-                                    type="number" 
+                                    type="text" 
+                                    inputMode="numeric"
+                                    maxLength={2}
                                     value={newDate}
-                                    onChange={e => setNewDate(e.target.value)}
-                                    placeholder="Dia"
-                                    min="1" max="31"
-                                    className="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 text-black font-bold focus:ring-2 focus:ring-black focus:outline-none transition-all"
+                                    onChange={e => {
+                                        const val = e.target.value.replace(/\D/g, '');
+                                        if (val.length <= 2) {
+                                            if (!val || parseInt(val) <= 31) {
+                                                setNewDate(val);
+                                            }
+                                        }
+                                    }}
+                                    placeholder="DD"
+                                    className="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 text-black font-bold focus:ring-2 focus:ring-black focus:outline-none transition-all text-center"
                                 />
                             </div>
                         </div>

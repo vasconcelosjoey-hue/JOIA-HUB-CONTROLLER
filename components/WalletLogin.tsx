@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Wallet, ArrowRight, Lock, CheckCircle2, UserPlus, LogIn, ChevronRight, KeyRound, Eye, EyeOff, ShieldCheck } from 'lucide-react';
+import { Wallet, ArrowRight, Lock, CheckCircle2, UserPlus, LogIn, ChevronRight, KeyRound, Eye, EyeOff, ShieldCheck, Loader2 } from 'lucide-react';
 import { useFirestoreCollection } from '../hooks/useFirestore';
 import { WalletDashboard } from './WalletDashboard';
 
@@ -28,6 +28,7 @@ export const WalletLogin: React.FC = () => {
     // Creation State
     const [newWalletName, setNewWalletName] = useState('');
     const [newWalletPin, setNewWalletPin] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
     
     // UI Helpers
     const [showPin, setShowPin] = useState(false);
@@ -40,17 +41,25 @@ export const WalletLogin: React.FC = () => {
             return;
         }
 
-        const newId = Date.now().toString();
-        const newWallet: WalletProfile = {
-            id: newId,
-            name: newWalletName,
-            pin: newWalletPin,
-            balance: 0
-        };
+        setIsSubmitting(true);
+        try {
+            const newId = Date.now().toString();
+            const newWallet: WalletProfile = {
+                id: newId,
+                name: newWalletName,
+                pin: newWalletPin,
+                balance: 0
+            };
 
-        await addWallet(newWallet);
-        setSelectedWallet(newWallet);
-        setView('success');
+            await addWallet(newWallet);
+            setSelectedWallet(newWallet);
+            setView('success');
+        } catch (error) {
+            console.error("Error creating wallet:", error);
+            setErrorMsg("Erro ao criar carteira.");
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const handleLogin = () => {
@@ -205,6 +214,9 @@ export const WalletLogin: React.FC = () => {
                         onChange={(e) => {
                             if (e.target.value.length <= 6) setInputPin(e.target.value);
                         }}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter' && inputPin.length > 0) handleLogin();
+                        }}
                         placeholder="******"
                         className={`w-full text-center text-3xl font-black tracking-widest py-6 rounded-2xl border-2 focus:outline-none transition-all ${errorMsg ? 'border-red-500 bg-red-50 text-red-500' : 'border-gray-200 focus:border-black bg-white'}`}
                         autoFocus
@@ -259,6 +271,12 @@ export const WalletLogin: React.FC = () => {
                     type="text" 
                     value={newWalletName}
                     onChange={(e) => setNewWalletName(e.target.value)}
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter' && newWalletName.trim()) {
+                             setNewWalletPin('');
+                             setView('create-pin');
+                        }
+                    }}
                     placeholder="Ex: Carteira Principal"
                     className="w-full bg-white border-2 border-gray-200 rounded-2xl px-6 py-5 text-xl font-bold focus:border-black outline-none mb-6 shadow-sm"
                     autoFocus
@@ -300,6 +318,9 @@ export const WalletLogin: React.FC = () => {
                         onChange={(e) => {
                              if (e.target.value.length <= 6) setNewWalletPin(e.target.value);
                         }}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter' && newWalletPin.length >= 4 && !isSubmitting) handleCreateWallet();
+                        }}
                         placeholder="******"
                         className="w-full bg-white border-2 border-gray-200 rounded-2xl px-6 py-5 text-3xl text-center font-black tracking-widest focus:border-black outline-none shadow-sm"
                         autoFocus
@@ -321,12 +342,16 @@ export const WalletLogin: React.FC = () => {
 
                 <button 
                     onClick={handleCreateWallet}
-                    disabled={newWalletPin.length < 4}
+                    disabled={newWalletPin.length < 4 || isSubmitting}
                     className={`w-full py-4 rounded-xl font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all ${
-                        newWalletPin.length >= 4 ? 'bg-black text-white shadow-lg' : 'bg-gray-200 text-gray-400'
+                        newWalletPin.length >= 4 && !isSubmitting ? 'bg-black text-white shadow-lg' : 'bg-gray-200 text-gray-400'
                     }`}
                 >
-                    Finalizar <CheckCircle2 size={18} />
+                    {isSubmitting ? (
+                        <>Criando... <Loader2 size={18} className="animate-spin" /></>
+                    ) : (
+                        <>Finalizar <CheckCircle2 size={18} /></>
+                    )}
                 </button>
             </div>
         );
