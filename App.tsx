@@ -39,9 +39,12 @@ function App() {
   useEffect(() => {
       const generatedAlerts: AlertItem[] = [];
 
+      // SAFETY CHECKS ADDED: Ensure arrays exist before iterating to prevent White Screen of Death
+
       // 1. Check Partnerships
-      if (partnershipCards && partnershipCards.length > 0) {
+      if (Array.isArray(partnershipCards) && partnershipCards.length > 0) {
         partnershipCards.forEach(card => {
+            if (!card) return;
             const level = getAlertLevel(card.dueDay);
             if (level) {
                 generatedAlerts.push({
@@ -57,10 +60,10 @@ function App() {
       }
 
       // 2. Check AI Tools
-      if (aiTools && aiTools.length > 0) {
+      if (Array.isArray(aiTools) && aiTools.length > 0) {
         aiTools.forEach(tool => {
             // Assuming tool has { id, name, value, dueDate }
-            if (tool.dueDate) {
+            if (tool && tool.dueDate) {
               const level = getAlertLevel(tool.dueDate);
               if (level) {
                   generatedAlerts.push({
@@ -77,10 +80,10 @@ function App() {
       }
 
       // 3. Check Platforms
-      if (platforms && platforms.length > 0) {
+      if (Array.isArray(platforms) && platforms.length > 0) {
         platforms.forEach(plat => {
             // Assuming plat has { id, name, value, dueDate, client }
-            if (plat.dueDate) {
+            if (plat && plat.dueDate) {
                 const level = getAlertLevel(plat.dueDate);
                 if (level) {
                     generatedAlerts.push({
@@ -116,11 +119,13 @@ function App() {
   };
 
   const handleAddPartnership = (newCard: PartnershipCard) => {
-      setPartnershipCards([...partnershipCards, newCard]);
+      setPartnershipCards([...(Array.isArray(partnershipCards) ? partnershipCards : []), newCard]);
   };
 
   const handleDeletePartnership = (id: string) => {
-      setPartnershipCards(partnershipCards.filter(c => c.id !== id));
+      if (Array.isArray(partnershipCards)) {
+          setPartnershipCards(partnershipCards.filter(c => c.id !== id));
+      }
   };
 
   // --- COMPONENTS FOR HUB BUTTONS (Reused for Mobile/Desktop) ---
@@ -276,7 +281,7 @@ function App() {
                 {currentView === 'platforms' && <PlatformManager />}
                 {currentView === 'partnership' && (
                     <PartnershipManager 
-                        cards={partnershipCards} 
+                        cards={Array.isArray(partnershipCards) ? partnershipCards : []} 
                         onAddCard={handleAddPartnership} 
                         onDeleteCard={handleDeletePartnership} 
                     />
