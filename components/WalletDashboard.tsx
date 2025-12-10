@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
-import { Plus, Trash2, TrendingUp, CreditCard, Target, Wallet, ArrowRight, Sparkles, TrendingDown, Layout, Edit3, X, GripVertical, AlertCircle, Copy, Check, Settings, Infinity, BarChart3, ChevronLeft, ChevronRight, Calendar, PieChart, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { Plus, Trash2, TrendingUp, CreditCard, Target, Wallet, ArrowRight, Sparkles, TrendingDown, Layout, Edit3, X, GripVertical, AlertCircle, Copy, Check, Settings, Infinity, BarChart3, ChevronLeft, ChevronRight, Calendar, PieChart, ArrowUpRight, ArrowDownRight, LayoutGrid } from 'lucide-react';
 import { formatCurrency } from '../services/utils';
 
 // --- Types ---
@@ -73,7 +73,7 @@ const INITIAL_STATE: DashboardState = {
     controller: {}
 };
 
-// --- Missing Component Definition: DetailedSection ---
+// --- Component Definition: DetailedSection ---
 interface DetailedSectionProps {
     listId: string;
     title: string;
@@ -112,7 +112,8 @@ const DetailedSection: React.FC<DetailedSectionProps> = ({
     const activeTheme = themeColors[theme] || themeColors.gray;
 
     return (
-        <div className={`bg-white rounded-2xl p-4 shadow-sm border border-gray-200 flex flex-col h-full relative ${isCompact ? '' : 'min-h-[200px]'}`}>
+        // REMOVED fixed height classes to allow auto-growth
+        <div className={`bg-white rounded-2xl p-4 shadow-sm border border-gray-200 flex flex-col relative transition-all duration-300 ease-in-out`}>
             {/* Header */}
             <div className="flex justify-between items-center mb-3 pb-2 border-b border-gray-100">
                 <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -125,6 +126,7 @@ const DetailedSection: React.FC<DetailedSectionProps> = ({
                             value={title} 
                             onChange={(e) => onTitleChange?.(e.target.value)}
                             className="font-black text-sm uppercase tracking-wide bg-transparent outline-none w-full min-w-0"
+                            placeholder="NOME DA SESSÃO"
                         />
                     ) : (
                         <h3 className="font-black text-xs text-gray-500 uppercase tracking-widest truncate">{title}</h3>
@@ -141,7 +143,7 @@ const DetailedSection: React.FC<DetailedSectionProps> = ({
             {/* List */}
             <div className="flex-1 space-y-2">
                 {items.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-full py-4 text-gray-300">
+                    <div className="flex flex-col items-center justify-center py-6 text-gray-300">
                         <p className="text-[10px] font-bold uppercase">Lista Vazia</p>
                     </div>
                 ) : (
@@ -208,7 +210,7 @@ const DetailedSection: React.FC<DetailedSectionProps> = ({
                                 </div>
                             </div>
 
-                            {/* Mobile Friendly Delete Button - Always visible but subtle */}
+                            {/* Delete Item Button */}
                             <button 
                                 onClick={() => onRemoveItem(item.id)}
                                 className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors ml-1"
@@ -262,7 +264,7 @@ const WalletReports: React.FC<WalletReportsProps> = ({ data, onClose, monthName 
                 <div className="p-6 border-b border-gray-100 flex justify-between items-center">
                     <div>
                         <h3 className="text-xl font-black text-black flex items-center gap-2">
-                            <PieChart size={20} className="text-black" /> Relatório Financeiro
+                            <LayoutGrid size={20} className="text-black" /> Dashboards & Relatórios
                         </h3>
                         <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">{monthName}</p>
                     </div>
@@ -275,52 +277,60 @@ const WalletReports: React.FC<WalletReportsProps> = ({ data, onClose, monthName 
                 <div className="overflow-y-auto p-6 space-y-8 custom-scrollbar">
                     
                     {/* 1. Balance Summary Cards */}
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="bg-emerald-50 rounded-2xl p-4 border border-emerald-100">
-                            <div className="flex items-center gap-2 mb-2 text-emerald-600">
-                                <ArrowUpRight size={16} />
-                                <span className="text-[10px] font-black uppercase">Entradas</span>
+                    <div>
+                        <h4 className="text-xs font-black text-gray-400 uppercase mb-3">Balanço Geral</h4>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="bg-emerald-50 rounded-2xl p-4 border border-emerald-100">
+                                <div className="flex items-center gap-2 mb-2 text-emerald-600">
+                                    <ArrowUpRight size={16} />
+                                    <span className="text-[10px] font-black uppercase">Entradas</span>
+                                </div>
+                                <p className="text-xl font-black text-emerald-700 truncate">{formatCurrency(totalIn)}</p>
                             </div>
-                            <p className="text-xl font-black text-emerald-700 truncate">{formatCurrency(totalIn)}</p>
-                        </div>
-                        <div className="bg-red-50 rounded-2xl p-4 border border-red-100">
-                            <div className="flex items-center gap-2 mb-2 text-red-600">
-                                <ArrowDownRight size={16} />
-                                <span className="text-[10px] font-black uppercase">Saídas</span>
+                            <div className="bg-red-50 rounded-2xl p-4 border border-red-100">
+                                <div className="flex items-center gap-2 mb-2 text-red-600">
+                                    <ArrowDownRight size={16} />
+                                    <span className="text-[10px] font-black uppercase">Saídas</span>
+                                </div>
+                                <p className="text-xl font-black text-red-700 truncate">{formatCurrency(totalOut)}</p>
                             </div>
-                            <p className="text-xl font-black text-red-700 truncate">{formatCurrency(totalOut)}</p>
                         </div>
                     </div>
 
                     {/* 2. Visual Bar Comparison */}
                     <div className="space-y-2">
                         <div className="flex justify-between text-xs font-bold text-gray-500">
-                            <span>Fluxo de Caixa</span>
-                            <span>{balance >= 0 ? 'Superávit' : 'Déficit'}</span>
+                            <span>Proporção de Fluxo</span>
+                            <span>{balance >= 0 ? 'Resultado Positivo' : 'Alerta de Déficit'}</span>
                         </div>
-                        <div className="h-4 bg-gray-100 rounded-full overflow-hidden flex">
-                            <div style={{ width: `${(totalIn / (totalIn + totalOut || 1)) * 100}%` }} className="bg-emerald-400 h-full"></div>
-                            <div style={{ width: `${(totalOut / (totalIn + totalOut || 1)) * 100}%` }} className="bg-red-400 h-full"></div>
+                        <div className="h-6 bg-gray-100 rounded-full overflow-hidden flex shadow-inner">
+                            <div style={{ width: `${(totalIn / (totalIn + totalOut || 1)) * 100}%` }} className="bg-emerald-500 h-full transition-all duration-1000"></div>
+                            <div style={{ width: `${(totalOut / (totalIn + totalOut || 1)) * 100}%` }} className="bg-red-500 h-full transition-all duration-1000"></div>
                         </div>
                         <div className="flex justify-between text-[10px] font-bold uppercase text-gray-400">
-                            <span>{((totalIn / (totalIn + totalOut || 1)) * 100).toFixed(0)}% Entradas</span>
-                            <span>{((totalOut / (totalIn + totalOut || 1)) * 100).toFixed(0)}% Saídas</span>
+                            <span className="text-emerald-600">{((totalIn / (totalIn + totalOut || 1)) * 100).toFixed(0)}% Receita</span>
+                            <span className="text-red-600">{((totalOut / (totalIn + totalOut || 1)) * 100).toFixed(0)}% Despesa</span>
                         </div>
                     </div>
 
-                    {/* 3. Category Breakdown */}
+                    {/* 3. Category Breakdown (Outras Sessões) */}
                     <div>
                         <h4 className="text-sm font-black text-black uppercase mb-4 flex items-center gap-2">
-                            <Layout size={14} /> Detalhamento por Sessão
+                            <PieChart size={14} /> Performance por Sessão
                         </h4>
                         <div className="space-y-4">
                             {categoriesData.length === 0 ? (
-                                <p className="text-center text-gray-400 text-xs py-4">Nenhuma despesa registrada.</p>
+                                <div className="text-center p-6 border-2 border-dashed border-gray-100 rounded-xl text-gray-400">
+                                    <p className="text-xs font-bold uppercase">Nenhum dado registrado</p>
+                                </div>
                             ) : (
-                                categoriesData.map(cat => (
+                                categoriesData.map((cat, idx) => (
                                     <div key={cat.id} className="space-y-1">
                                         <div className="flex justify-between text-xs font-bold">
-                                            <span className="text-gray-700">{cat.title}</span>
+                                            <span className="text-gray-700 flex items-center gap-2">
+                                                <span className="w-4 h-4 rounded-full bg-black text-white flex items-center justify-center text-[9px]">{idx + 1}</span>
+                                                {cat.title}
+                                            </span>
                                             <span className="text-black">{formatCurrency(cat.value)}</span>
                                         </div>
                                         <div className="h-2 w-full bg-gray-50 rounded-full overflow-hidden">
@@ -731,12 +741,12 @@ export const WalletDashboard: React.FC = () => {
                                 <button onClick={() => changeYear(1)} className="p-1 hover:bg-gray-200 rounded-md"><ChevronRight size={14}/></button>
                             </div>
                             
-                            {/* NEW: GENERATE REPORT BUTTON */}
+                            {/* NEW: DASHBOARD REPORT BUTTON */}
                             <button 
                                 onClick={() => setShowReports(true)}
-                                className="bg-black text-white px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-[10px] font-bold uppercase hover:bg-gray-800 transition-colors shadow-sm"
+                                className="bg-black text-white px-4 py-2 rounded-xl flex items-center gap-2 text-xs font-black uppercase hover:bg-gray-800 transition-all shadow-lg active:scale-95"
                             >
-                                <PieChart size={12} /> Gerar Relatório
+                                <LayoutGrid size={14} /> Dashboards
                             </button>
                         </div>
                         
