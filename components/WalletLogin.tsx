@@ -42,6 +42,8 @@ export const WalletLogin: React.FC = () => {
         }
 
         setIsSubmitting(true);
+        setErrorMsg(''); // Clear previous errors
+
         try {
             const newId = Date.now().toString();
             const newWallet: WalletProfile = {
@@ -52,11 +54,15 @@ export const WalletLogin: React.FC = () => {
             };
 
             await addWallet(newWallet);
+            
+            // Small delay to ensure Firestore propagation
+            await new Promise(resolve => setTimeout(resolve, 800));
+
             setSelectedWallet(newWallet);
             setView('success');
         } catch (error) {
             console.error("Error creating wallet:", error);
-            setErrorMsg("Erro ao criar carteira.");
+            setErrorMsg("Erro ao salvar. Tente novamente.");
         } finally {
             setIsSubmitting(false);
         }
@@ -317,12 +323,13 @@ export const WalletLogin: React.FC = () => {
                         value={newWalletPin}
                         onChange={(e) => {
                              if (e.target.value.length <= 6) setNewWalletPin(e.target.value);
+                             if (errorMsg) setErrorMsg(''); // Clear error on input
                         }}
                         onKeyDown={(e) => {
                             if (e.key === 'Enter' && newWalletPin.length >= 4 && !isSubmitting) handleCreateWallet();
                         }}
                         placeholder="******"
-                        className="w-full bg-white border-2 border-gray-200 rounded-2xl px-6 py-5 text-3xl text-center font-black tracking-widest focus:border-black outline-none shadow-sm"
+                        className={`w-full bg-white border-2 rounded-2xl px-6 py-5 text-3xl text-center font-black tracking-widest focus:border-black outline-none shadow-sm ${errorMsg ? 'border-red-500 text-red-500' : 'border-gray-200'}`}
                         autoFocus
                     />
                      <button 
@@ -332,6 +339,13 @@ export const WalletLogin: React.FC = () => {
                         {showPin ? <EyeOff size={20} /> : <Eye size={20} />}
                     </button>
                 </div>
+
+                {/* Error Message Added Here to fix "Nothing Happens" confusion */}
+                {errorMsg && (
+                    <p className="text-red-500 font-bold text-sm mb-6 animate-pulse flex items-center gap-1">
+                        <ShieldCheck size={14}/> {errorMsg}
+                    </p>
+                )}
 
                 <div className="flex items-start gap-2 mb-6 bg-blue-50 p-3 rounded-xl">
                     <KeyRound size={16} className="text-blue-500 mt-0.5 shrink-0" />
