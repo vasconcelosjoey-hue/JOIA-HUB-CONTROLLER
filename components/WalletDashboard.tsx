@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
-import { Plus, Trash2, TrendingUp, CreditCard, Target, Wallet, ArrowRight, Sparkles, TrendingDown, Layout, Edit3, X, GripVertical, AlertCircle, Copy, Check, Settings, Infinity, BarChart3, ChevronLeft, ChevronRight, Calendar, PieChart, ArrowUpRight, ArrowDownRight, LayoutGrid } from 'lucide-react';
+import { Plus, Trash2, TrendingUp, CreditCard, Target, Wallet, ArrowRight, Sparkles, TrendingDown, Layout, Edit3, X, GripVertical, AlertCircle, Copy, Check, Settings, Infinity, BarChart3, ChevronLeft, ChevronRight, Calendar, PieChart, ArrowUpRight, ArrowDownRight, LayoutGrid, Clipboard } from 'lucide-react';
 import { formatCurrency } from '../services/utils';
 
 // --- Types ---
@@ -143,7 +143,11 @@ const DetailedSection: React.FC<DetailedSectionProps> = ({
             {/* List */}
             <div className="flex-1 space-y-2">
                 {items.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-6 text-gray-300">
+                    <div 
+                        className="flex flex-col items-center justify-center py-6 text-gray-300 border-2 border-dashed border-gray-50 rounded-xl transition-colors hover:border-gray-200 hover:bg-gray-50"
+                        onDragOver={onDragOver}
+                        onDrop={() => onDrop?.(listId, 0)}
+                    >
                         <p className="text-[10px] font-bold uppercase">Lista Vazia</p>
                     </div>
                 ) : (
@@ -443,7 +447,7 @@ export const WalletDashboard: React.FC = () => {
         return { in: totalInflows, out: totalOutflows, max: maxVal };
     }, [totalInflows, totalOutflows]);
 
-    // --- DRAG AND DROP HANDLERS ---
+    // --- DRAG AND DROP HANDLERS (UNIVERSAL) ---
     const handleDragStart = (listId: string, index: number) => {
         setDraggedItem({ listId, index });
     };
@@ -453,31 +457,44 @@ export const WalletDashboard: React.FC = () => {
     };
 
     const handleDrop = (targetListId: string, targetIndex: number) => {
-        if (!draggedItem || draggedItem.listId !== targetListId) return;
+        if (!draggedItem) return;
+        const { listId: sourceListId, index: sourceIndex } = draggedItem;
 
-        const listKey = targetListId.split(':')[0]; 
-        const catId = targetListId.split(':')[1]; 
+        // Prevent dropping on self at same index (optional optimization)
+        if (sourceListId === targetListId && sourceIndex === targetIndex) return;
 
-        let newData = { ...data };
+        // Create Deep Copy
+        const newData = JSON.parse(JSON.stringify(data));
 
-        if (listKey === 'inflows') {
-            const newItems = [...newData.inflows];
-            const [removed] = newItems.splice(draggedItem.index, 1);
-            newItems.splice(targetIndex, 0, removed);
-            newData.inflows = newItems;
-        } else if (listKey === 'cat' && catId) {
-            const newCategories = newData.outflowCategories.map(cat => {
-                if (cat.id === catId) {
-                    const newItems = [...cat.items];
-                    const [removed] = newItems.splice(draggedItem.index, 1);
-                    newItems.splice(targetIndex, 0, removed);
-                    return { ...cat, items: newItems };
-                }
-                return cat;
-            });
-            newData.outflowCategories = newCategories;
+        // Helper to get list reference by ID string
+        const getListArray = (lId: string, d: WalletData): FinanceItem[] | null => {
+            if (lId === 'inflows') return d.inflows;
+            if (lId === 'onRadar') return d.onRadar;
+            if (lId === 'cardLimits') return d.cardLimits;
+            if (lId.startsWith('cat:')) {
+                const catId = lId.split(':')[1];
+                const cat = d.outflowCategories.find(c => c.id === catId);
+                return cat ? cat.items : null;
+            }
+            return null;
+        };
+
+        const sourceList = getListArray(sourceListId, newData);
+        const targetList = getListArray(targetListId, newData);
+
+        if (sourceList && targetList) {
+            // 1. Remove from source
+            const [movedItem] = sourceList.splice(sourceIndex, 1);
+            
+            // 2. Insert into target
+            // Ensure targetIndex is within bounds (e.g., dropping at end of list)
+            const safeIndex = Math.min(targetIndex, targetList.length);
+            targetList.splice(safeIndex, 0, movedItem);
+
+            // 3. Save
+            updateActiveData(newData);
         }
-        updateActiveData(newData);
+
         setDraggedItem(null);
     };
 
@@ -525,17 +542,32 @@ export const WalletDashboard: React.FC = () => {
     };
 
     // DUPLICATION LOGIC
-    const handleDuplicate = (listKey: 'inflows' | 'onRadar' | 'cardLimits' | 'cat', itemId: string, catId?: string) => {
-        let newData = { ...data };
+    const handleDuplicate = (listKey: 'inflows' | 'onRadar' | 'cardLimits' | 'cat' | 'pixKeys', itemId: string, catId?: string) => {
+        let newData = JSON.parse(JSON.stringify(data)); // Deep copy for safety
         const newId = Date.now().toString() + Math.random().toString().slice(2,5);
 
+        if (listKey === 'pixKeys') {
+            const list = newData.pixKeys;
+            const originalItem = list.find((i: PixKey) => i.id === itemId);
+            if (originalItem) {
+                 const newItem = {
+                     ...originalItem,
+                     id: newId,
+                     title: `${originalItem.title} (Cópia)`
+                 };
+                 newData.pixKeys = [...list, newItem];
+                 updateActiveData(newData);
+            }
+            return;
+        }
+
         if (listKey === 'cat' && catId) {
-             const category = newData.outflowCategories.find(c => c.id === catId);
+             const category = newData.outflowCategories.find((c: OutflowCategory) => c.id === catId);
              if (category) {
-                 const originalItem = category.items.find(i => i.id === itemId);
+                 const originalItem = category.items.find((i: FinanceItem) => i.id === itemId);
                  if (originalItem) {
                      const newItem = { ...originalItem, id: newId, name: `${originalItem.name} (Cópia)` };
-                     const updatedCats = newData.outflowCategories.map(c => 
+                     const updatedCats = newData.outflowCategories.map((c: OutflowCategory) => 
                         c.id === catId ? { ...c, items: [...c.items, newItem] } : c
                      );
                      newData.outflowCategories = updatedCats;
@@ -1035,6 +1067,9 @@ export const WalletDashboard: React.FC = () => {
                     variant="compact"
                     focusId={focusId}
                     showDate={state.mode === 'CONTROLLER'}
+                    onDragStart={handleDragStart}
+                    onDragOver={handleDragOver}
+                    onDrop={handleDrop}
                 />
 
                 <DetailedSection 
@@ -1051,6 +1086,9 @@ export const WalletDashboard: React.FC = () => {
                     variant="compact"
                     focusId={focusId}
                     showDate={state.mode === 'CONTROLLER'}
+                    onDragStart={handleDragStart}
+                    onDragOver={handleDragOver}
+                    onDrop={handleDrop}
                 />
             </div>
 
@@ -1087,10 +1125,18 @@ export const WalletDashboard: React.FC = () => {
                             </div>
                             <div className="flex items-center gap-1">
                                 <button 
+                                    onClick={() => handleDuplicate('pixKeys', pk.id)}
+                                    className="p-1.5 rounded-md bg-white/10 text-gray-400 hover:text-white transition-colors"
+                                    title="Duplicar Chave"
+                                >
+                                    <Copy size={12} />
+                                </button>
+                                <button 
                                     onClick={() => copyPix(pk.key, pk.id)} 
                                     className={`p-1.5 rounded-md transition-colors ${copiedKeyId === pk.id ? 'bg-green-500 text-white' : 'bg-white/10 text-gray-400 hover:text-white'}`}
+                                    title="Copiar Código"
                                 >
-                                    {copiedKeyId === pk.id ? <Check size={12}/> : <Copy size={12}/>}
+                                    {copiedKeyId === pk.id ? <Check size={12}/> : <Clipboard size={12}/>}
                                 </button>
                                 <button 
                                     onClick={(e) => {
