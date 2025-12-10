@@ -83,6 +83,7 @@ interface DetailedSectionProps {
     onAddItem: () => void;
     onRemoveItem: (id: string) => void;
     onUpdateItem: (id: string, field: keyof FinanceItem, value: any) => void;
+    onDuplicateItem?: (id: string) => void;
     onDragStart?: (listId: string, index: number) => void;
     onDragOver?: (e: React.DragEvent) => void;
     onDrop?: (listId: string, index: number) => void;
@@ -96,11 +97,9 @@ interface DetailedSectionProps {
 }
 
 const DetailedSection: React.FC<DetailedSectionProps> = ({
-    listId, title, icon, items, totalValue, onAddItem, onRemoveItem, onUpdateItem,
+    listId, title, icon, items, totalValue, onAddItem, onRemoveItem, onUpdateItem, onDuplicateItem,
     onDragStart, onDragOver, onDrop, theme, variant, titleEditable, onTitleChange, focusId, customHeaderAction
 }) => {
-    const isCompact = variant === 'compact';
-    
     // Theme colors
     const themeColors: Record<string, string> = {
         green: 'bg-emerald-50 border-emerald-100 text-emerald-600',
@@ -163,8 +162,8 @@ const DetailedSection: React.FC<DetailedSectionProps> = ({
                             )}
                             
                             <div className="flex-1 min-w-0 grid grid-cols-12 gap-2 items-center">
-                                {/* Name & Details */}
-                                <div className={`${isCompact ? 'col-span-7' : 'col-span-6 sm:col-span-5'}`}>
+                                {/* Name & Details - REFACTORED TO TAKE UP DATE SPACE */}
+                                <div className="col-span-8">
                                     <input 
                                         type="text" 
                                         value={item.name} 
@@ -173,32 +172,17 @@ const DetailedSection: React.FC<DetailedSectionProps> = ({
                                         placeholder="Nome..."
                                         autoFocus={focusId === item.id}
                                     />
-                                    {!isCompact && (
-                                        <input 
-                                            type="text" 
-                                            value={item.details} 
-                                            onChange={(e) => onUpdateItem(item.id, 'details', e.target.value)}
-                                            className="text-[10px] font-medium text-gray-400 bg-transparent outline-none w-full placeholder:text-gray-200 hidden sm:block"
-                                            placeholder="Detalhes..."
-                                        />
-                                    )}
+                                    <input 
+                                        type="text" 
+                                        value={item.details} 
+                                        onChange={(e) => onUpdateItem(item.id, 'details', e.target.value)}
+                                        className="text-[10px] font-medium text-gray-400 bg-transparent outline-none w-full placeholder:text-gray-200 block"
+                                        placeholder="Detalhes..."
+                                    />
                                 </div>
-                                
-                                {/* Date (If not compact) */}
-                                {!isCompact && (
-                                    <div className="col-span-3 hidden sm:flex items-center">
-                                        <input 
-                                            type="text" 
-                                            value={item.date} 
-                                            onChange={(e) => onUpdateItem(item.id, 'date', e.target.value)}
-                                            className="text-[10px] font-bold text-gray-500 bg-gray-100 rounded px-1.5 py-0.5 text-center w-full outline-none uppercase"
-                                            placeholder="DATA"
-                                        />
-                                    </div>
-                                )}
 
-                                {/* Value */}
-                                <div className={`${isCompact ? 'col-span-5' : 'col-span-6 sm:col-span-4'} flex items-center justify-end gap-1`}>
+                                {/* Value - No Spinners (Handled in CSS) */}
+                                <div className="col-span-4 flex items-center justify-end gap-1">
                                     <span className="text-[10px] text-gray-400 font-bold">R$</span>
                                     <input 
                                         type="number" 
@@ -210,15 +194,27 @@ const DetailedSection: React.FC<DetailedSectionProps> = ({
                                 </div>
                             </div>
 
-                            {/* Delete Item Button */}
-                            <button 
-                                onClick={() => onRemoveItem(item.id)}
-                                className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors ml-1"
-                                type="button"
-                                title="Excluir item"
-                            >
-                                <Trash2 size={14} />
-                            </button>
+                            {/* Actions Group */}
+                            <div className="flex items-center opacity-30 group-hover:opacity-100 transition-opacity">
+                                {/* Duplicate Button */}
+                                <button
+                                    onClick={() => onDuplicateItem?.(item.id)}
+                                    className="p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
+                                    title="Duplicar item"
+                                    type="button"
+                                >
+                                    <Copy size={14} />
+                                </button>
+                                {/* Delete Item Button */}
+                                <button 
+                                    onClick={() => onRemoveItem(item.id)}
+                                    className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                    type="button"
+                                    title="Excluir item"
+                                >
+                                    <Trash2 size={14} />
+                                </button>
+                            </div>
                         </div>
                     ))
                 )}
@@ -363,8 +359,8 @@ const WalletReports: React.FC<WalletReportsProps> = ({ data, onClose, monthName 
 };
 
 export const WalletDashboard: React.FC = () => {
-    // UPDATED KEY TO v11 to fix white screen crash from corrupted state
-    const [state, setState] = useLocalStorage<DashboardState>('joia_wallet_v11_system', INITIAL_STATE);
+    // UPDATED KEY TO v12
+    const [state, setState] = useLocalStorage<DashboardState>('joia_wallet_v12_system', INITIAL_STATE);
     const [smartCommand, setSmartCommand] = useState('');
     const [lastAction, setLastAction] = useState<string | null>(null);
     const [showReports, setShowReports] = useState(false);
@@ -510,6 +506,39 @@ export const WalletDashboard: React.FC = () => {
         // Direct update to ensure re-render
         const newData = { ...data, [listKey]: data[listKey].filter(item => item.id !== id) };
         updateActiveData(newData);
+    };
+
+    // DUPLICATION LOGIC
+    const handleDuplicate = (listKey: 'inflows' | 'onRadar' | 'cardLimits' | 'cat', itemId: string, catId?: string) => {
+        let newData = { ...data };
+        const newId = Date.now().toString() + Math.random().toString().slice(2,5);
+
+        if (listKey === 'cat' && catId) {
+             const category = newData.outflowCategories.find(c => c.id === catId);
+             if (category) {
+                 const originalItem = category.items.find(i => i.id === itemId);
+                 if (originalItem) {
+                     const newItem = { ...originalItem, id: newId, name: `${originalItem.name} (Cópia)` };
+                     const updatedCats = newData.outflowCategories.map(c => 
+                        c.id === catId ? { ...c, items: [...c.items, newItem] } : c
+                     );
+                     newData.outflowCategories = updatedCats;
+                     updateActiveData(newData);
+                     setFocusId(newId);
+                 }
+             }
+        } else if (listKey !== 'cat') {
+             // @ts-ignore
+             const list = newData[listKey] as FinanceItem[];
+             const originalItem = list.find(i => i.id === itemId);
+             if (originalItem) {
+                 const newItem = { ...originalItem, id: newId, name: `${originalItem.name} (Cópia)` };
+                 // @ts-ignore
+                 newData[listKey] = [...list, newItem];
+                 updateActiveData(newData);
+                 setFocusId(newId);
+             }
+        }
     };
 
     // Outflow Categories & Items
@@ -703,7 +732,7 @@ export const WalletDashboard: React.FC = () => {
     };
 
     return (
-        <div className="max-w-5xl mx-auto space-y-4 pb-24 font-sans px-2 sm:px-0">
+        <div className="max-w-7xl mx-auto space-y-4 pb-24 font-sans px-2 sm:px-0">
             
             {showReports && (
                 <WalletReports 
@@ -893,79 +922,83 @@ export const WalletDashboard: React.FC = () => {
                  </div>
             </div>
 
-            {/* 2) ENTRADAS (INFLOWS) */}
-            <DetailedSection 
-                listId="inflows"
-                title="Entradas Previstas"
-                icon={<TrendingUp size={16} className="text-emerald-500" />}
-                items={data.inflows}
-                totalValue={totalInflows}
-                onAddItem={() => addItem('inflows')}
-                onRemoveItem={(id) => removeItem('inflows', id)}
-                onUpdateItem={(id, field, val) => updateItem('inflows', id, field, val)}
-                onDragStart={handleDragStart}
-                onDragOver={handleDragOver}
-                onDrop={handleDrop}
-                theme="green"
-                focusId={focusId}
-            />
-
-            {/* 3) SAÍDAS DINÂMICAS (OUTFLOWS) */}
-            <div className="space-y-4">
-                <div className="flex items-center justify-between px-1 pt-2 relative">
-                    <h2 className="text-base font-black text-black flex items-center gap-2">
-                        <TrendingDown size={18} className="text-red-500" />
-                        SAÍDAS & DESPESAS
-                    </h2>
-                </div>
+            {/* --- MAIN CONTENT GRID: SIDE BY SIDE --- */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
                 
-                {/* CENTERED ADD BUTTON */}
-                <div className="flex justify-center">
-                     <button 
-                        onClick={() => addOutflowCategory()}
-                        className="flex items-center gap-2 bg-black text-white px-6 py-2 rounded-full text-xs font-black uppercase tracking-widest hover:scale-105 transition-all shadow-lg"
-                    >
-                        <Layout size={14} /> Nova Sessão
-                    </button>
+                {/* LEFT COL: ENTRADAS */}
+                <div>
+                    <DetailedSection 
+                        listId="inflows"
+                        title="Entradas Previstas"
+                        icon={<TrendingUp size={16} className="text-emerald-500" />}
+                        items={data.inflows}
+                        totalValue={totalInflows}
+                        onAddItem={() => addItem('inflows')}
+                        onRemoveItem={(id) => removeItem('inflows', id)}
+                        onUpdateItem={(id, field, val) => updateItem('inflows', id, field, val)}
+                        onDuplicateItem={(id) => handleDuplicate('inflows', id)}
+                        onDragStart={handleDragStart}
+                        onDragOver={handleDragOver}
+                        onDrop={handleDrop}
+                        theme="green"
+                        focusId={focusId}
+                    />
                 </div>
 
-                {data.outflowCategories.map(cat => (
-                    <div key={cat.id} className="animate-in slide-in-from-bottom-2 duration-500">
-                        <DetailedSection 
-                            listId={`cat:${cat.id}`}
-                            title={cat.title}
-                            titleEditable
-                            onTitleChange={(newTitle) => updateCategoryTitle(cat.id, newTitle)}
-                            icon={<CreditCard size={16} className="text-red-400" />}
-                            items={cat.items}
-                            totalValue={cat.items.reduce((a, b) => a + b.value, 0)}
-                            onAddItem={() => addOutflowItem(cat.id)}
-                            onRemoveItem={(itemId) => removeOutflowItem(cat.id, itemId)}
-                            onUpdateItem={(itemId, field, val) => updateOutflowItem(cat.id, itemId, field, val)}
-                            onDragStart={handleDragStart}
-                            onDragOver={handleDragOver}
-                            onDrop={handleDrop}
-                            theme="red"
-                            focusId={focusId}
-                            catId={cat.id}
-                            customHeaderAction={
-                                <div className="flex items-center gap-2">
-                                    <button 
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            removeOutflowCategory(cat.id);
-                                        }}
-                                        className="text-gray-400 hover:text-red-600 p-1 transition-colors"
-                                        title="Excluir Sessão"
-                                        type="button"
-                                    >
-                                        <Trash2 size={14} />
-                                    </button>
-                                </div>
-                            }
-                        />
+                {/* RIGHT COL: SAÍDAS */}
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between px-1 pt-0 relative">
+                        <h2 className="text-base font-black text-black flex items-center gap-2">
+                            <TrendingDown size={18} className="text-red-500" />
+                            SAÍDAS & DESPESAS
+                        </h2>
+                         <button 
+                            onClick={() => addOutflowCategory()}
+                            className="flex items-center gap-2 bg-black text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all shadow-md"
+                        >
+                            <Layout size={12} /> Nova Sessão
+                        </button>
                     </div>
-                ))}
+                    
+                    {data.outflowCategories.map(cat => (
+                        <div key={cat.id} className="animate-in slide-in-from-bottom-2 duration-500">
+                            <DetailedSection 
+                                listId={`cat:${cat.id}`}
+                                title={cat.title}
+                                titleEditable
+                                onTitleChange={(newTitle) => updateCategoryTitle(cat.id, newTitle)}
+                                icon={<CreditCard size={16} className="text-red-400" />}
+                                items={cat.items}
+                                totalValue={cat.items.reduce((a, b) => a + b.value, 0)}
+                                onAddItem={() => addOutflowItem(cat.id)}
+                                onRemoveItem={(itemId) => removeOutflowItem(cat.id, itemId)}
+                                onUpdateItem={(itemId, field, val) => updateOutflowItem(cat.id, itemId, field, val)}
+                                onDuplicateItem={(itemId) => handleDuplicate('cat', itemId, cat.id)}
+                                onDragStart={handleDragStart}
+                                onDragOver={handleDragOver}
+                                onDrop={handleDrop}
+                                theme="red"
+                                focusId={focusId}
+                                catId={cat.id}
+                                customHeaderAction={
+                                    <div className="flex items-center gap-2">
+                                        <button 
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                removeOutflowCategory(cat.id);
+                                            }}
+                                            className="text-gray-400 hover:text-red-600 p-1 transition-colors"
+                                            title="Excluir Sessão"
+                                            type="button"
+                                        >
+                                            <Trash2 size={14} />
+                                        </button>
+                                    </div>
+                                }
+                            />
+                        </div>
+                    ))}
+                </div>
             </div>
 
             {/* 4) NO RADAR & LIMITES (INFORMATIVOS) */}
@@ -979,6 +1012,7 @@ export const WalletDashboard: React.FC = () => {
                     onAddItem={() => addItem('onRadar')}
                     onRemoveItem={(id) => removeItem('onRadar', id)}
                     onUpdateItem={(id, field, val) => updateItem('onRadar', id, field, val)}
+                    onDuplicateItem={(id) => handleDuplicate('onRadar', id)}
                     theme="purple"
                     variant="compact"
                     focusId={focusId}
@@ -993,6 +1027,7 @@ export const WalletDashboard: React.FC = () => {
                     onAddItem={() => addItem('cardLimits')}
                     onRemoveItem={(id) => removeItem('cardLimits', id)}
                     onUpdateItem={(id, field, val) => updateItem('cardLimits', id, field, val)}
+                    onDuplicateItem={(id) => handleDuplicate('cardLimits', id)}
                     theme="gray"
                     variant="compact"
                     focusId={focusId}
