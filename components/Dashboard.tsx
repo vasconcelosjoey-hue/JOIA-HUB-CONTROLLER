@@ -1,15 +1,19 @@
+
 import React, { useState, useRef } from 'react';
 import { Project } from '../types';
 import { formatCurrency, getStatusColor, extractDominantColor } from '../services/utils';
-import { Briefcase, Building2, Plus, X, MapPin, Upload, Trash2, MessageCircle, ExternalLink, Check, Navigation } from 'lucide-react';
+import { Briefcase, Building2, Plus, X, MapPin, Upload, Trash2, MessageCircle, ExternalLink, Check, Navigation, Loader2 } from 'lucide-react';
 import { useFirestoreCollection } from '../hooks/useFirestore';
-import { DEFAULT_OWNER_ID } from '../constants';
 
 export const Dashboard: React.FC = () => {
-  const { data: projects, addItem, updateItem, deleteItem } = useFirestoreCollection<Project>('projects');
+  const { data: projects, loading, addItem, updateItem, deleteItem } = useFirestoreCollection<Project>('projects');
   
   const [isAdding, setIsAdding] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
+  
+  // Action Loading States
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   // New Project Form State
   const [newName, setNewName] = useState('');
@@ -23,27 +27,33 @@ export const Dashboard: React.FC = () => {
 
   const handleAddProject = async () => {
     if (!newName) return;
+    setIsSubmitting(true);
 
-    // Using Partial<Project> type matching the new schema
-    const newProject: any = {
-        id: Date.now().toString(),
-        nome: newName,
-        cnpj: newCNPJ || 'Não informado',
-        status: 'EM TREINAMENTO',
-        dataStart: newStartDate || new Date().toISOString(),
-        diaMensalidade: 5,
-        supervisorName: newSupervisor,
-        supervisorContact: newContact,
-        valorContrato: parseFloat(newVal) || 0,
-        brandColor: '#000000',
-        address: '',
-        ownerId: DEFAULT_OWNER_ID,
-        createdAt: new Date().toISOString()
-    };
+    try {
+        // Remove 'id' to let Firestore generate a unique one via addDoc
+        const newProject: any = {
+            nome: newName,
+            cnpj: newCNPJ || 'Não informado',
+            status: 'EM TREINAMENTO',
+            dataStart: newStartDate || new Date().toISOString(),
+            diaMensalidade: 5,
+            supervisorName: newSupervisor,
+            supervisorContact: newContact,
+            valorContrato: parseFloat(newVal) || 0,
+            brandColor: '#000000',
+            address: '',
+            createdAt: new Date().toISOString()
+        };
 
-    await addItem(newProject);
-    setIsAdding(false);
-    resetForm();
+        await addItem(newProject);
+        setIsAdding(false);
+        resetForm();
+    } catch (error) {
+        console.error("Error adding project", error);
+        alert("Erro ao adicionar projeto.");
+    } finally {
+        setIsSubmitting(false);
+    }
   };
 
   const resetForm = () => {
@@ -62,8 +72,16 @@ export const Dashboard: React.FC = () => {
 
   const handleSaveEdit = async () => {
       if (!editingProject) return;
-      await updateItem(editingProject.id, editingProject);
-      setEditingProject(null);
+      setIsSaving(true);
+      try {
+          await updateItem(editingProject.id, editingProject);
+          setEditingProject(null);
+      } catch (error) {
+          console.error("Error updating project", error);
+          alert("Erro ao salvar alterações.");
+      } finally {
+          setIsSaving(false);
+      }
   };
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -99,6 +117,15 @@ export const Dashboard: React.FC = () => {
       if (!url) return;
       const finalUrl = url.startsWith('http') ? url : `https://${url}`;
       window.open(finalUrl, '_blank');
+  }
+
+  if (loading) {
+      return (
+          <div className="h-96 flex flex-col items-center justify-center text-gray-400 gap-4 animate-in fade-in">
+              <Loader2 size={40} className="animate-spin text-black" />
+              <p className="text-xs font-bold uppercase tracking-widest">Carregando Projetos...</p>
+          </div>
+      );
   }
 
   return (
@@ -223,8 +250,13 @@ export const Dashboard: React.FC = () => {
                   
                   <div className="p-6 border-t border-gray-100 bg-gray-50 flex justify-end gap-3 sticky bottom-0 z-20">
                       <button onClick={() => setEditingProject(null)} className="px-6 py-3 rounded-xl font-bold text-gray-500 hover:bg-gray-200 transition-colors">Cancelar</button>
-                      <button onClick={handleSaveEdit} className="px-8 py-3 rounded-xl font-bold bg-black text-white hover:bg-gray-800 transition-colors flex items-center gap-2 shadow-lg">
-                          <Check size={18} /> Salvar
+                      <button 
+                        onClick={handleSaveEdit} 
+                        disabled={isSaving}
+                        className="px-8 py-3 rounded-xl font-bold bg-black text-white hover:bg-gray-800 transition-colors flex items-center gap-2 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                          {isSaving ? <Loader2 size={18} className="animate-spin"/> : <Check size={18} />} 
+                          {isSaving ? 'Salvando...' : 'Salvar'}
                       </button>
                   </div>
               </div>
@@ -240,8 +272,13 @@ export const Dashboard: React.FC = () => {
                     <input type="text" value={newName} onChange={e => setNewName(e.target.value)} className="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 text-black font-bold focus:ring-2 focus:ring-black outline-none transition-all" />
                 </div>
                  <div className="md:col-span-2 lg:col-span-3 pt-4">
-                    <button onClick={handleAddProject} className="w-full bg-black text-white py-4 rounded-xl font-black uppercase tracking-widest hover:scale-[1.01] transition-transform">
-                        Confirmar Cadastro
+                    <button 
+                        onClick={handleAddProject} 
+                        disabled={isSubmitting || !newName}
+                        className="w-full bg-black text-white py-4 rounded-xl font-black uppercase tracking-widest hover:scale-[1.01] transition-transform disabled:opacity-50 disabled:scale-100 flex items-center justify-center gap-2"
+                    >
+                        {isSubmitting && <Loader2 size={18} className="animate-spin"/>}
+                        {isSubmitting ? 'Registrando...' : 'Confirmar Cadastro'}
                     </button>
                 </div>
             </div>
@@ -250,16 +287,16 @@ export const Dashboard: React.FC = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         {projects.length === 0 ? (
-            <div className="col-span-full py-12 flex flex-col items-center justify-center text-gray-400 border-2 border-dashed border-gray-200 rounded-3xl">
+            <div className="col-span-full py-12 flex flex-col items-center justify-center text-gray-400 border-2 border-dashed border-gray-200 rounded-3xl animate-in fade-in">
                 <Briefcase size={48} strokeWidth={1} className="mb-3 opacity-20"/>
-                <p className="font-bold">Nenhum projeto.</p>
+                <p className="font-bold">Nenhum projeto cadastrado.</p>
             </div>
         ) : (
             projects.map(project => (
                 <div 
                     key={project.id} 
                     onClick={() => setEditingProject(project)}
-                    className="group bg-white rounded-3xl p-5 shadow-apple hover:shadow-float transition-all duration-300 border-2 cursor-pointer relative overflow-hidden flex flex-col gap-4"
+                    className="group bg-white rounded-3xl p-5 shadow-apple hover:shadow-float transition-all duration-300 border-2 cursor-pointer relative overflow-hidden flex flex-col gap-4 animate-in fade-in"
                     style={{ borderColor: project.brandColor ? `${project.brandColor}20` : '#e5e7eb' }}
                 >
                     <div className="absolute top-0 left-0 w-full h-1.5" style={{ backgroundColor: project.brandColor || '#000' }}></div>

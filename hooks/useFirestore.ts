@@ -8,25 +8,19 @@ import {
     deleteDoc, 
     updateDoc, 
     addDoc,
-    query,
-    where,
-    orderBy
+    query
 } from 'firebase/firestore';
 import { db } from '../services/firebase';
-import { DEFAULT_OWNER_ID } from '../constants';
 
 // Hook for Arrays (Lists like Projects, Tools, etc.)
-// Automatically filters by ownerId for security
+// Standardized Pattern: Global Public Collections
 export function useFirestoreCollection<T extends { id: string }>(collectionName: string) {
     const [data, setData] = useState<T[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // Enforce Owner Isolation
-        const q = query(
-            collection(db, collectionName), 
-            where("ownerId", "==", DEFAULT_OWNER_ID)
-        );
+        // Global Query - No Owner Filter
+        const q = query(collection(db, collectionName));
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const items: T[] = [];
@@ -46,7 +40,6 @@ export function useFirestoreCollection<T extends { id: string }>(collectionName:
     const addItem = async (item: Omit<T, 'id'> | T) => {
         const payload = {
             ...item,
-            ownerId: DEFAULT_OWNER_ID,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
         };
@@ -74,62 +67,7 @@ export function useFirestoreCollection<T extends { id: string }>(collectionName:
     return { data, loading, addItem, updateItem, deleteItem };
 }
 
-// Hook for Subcollections (e.g. wallets/{id}/entries)
-// This is critical for the "Event Sourcing" pattern requested
-export function useFirestoreSubCollection<T extends { id: string }>(
-    parentCollection: string, 
-    parentId: string, 
-    subCollection: string
-) {
-    const [data, setData] = useState<T[]>([]);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        if (!parentId) return;
-
-        // Path: parent/{id}/subcollection
-        // Order by date desc is standard for financial feeds
-        const q = query(
-            collection(db, parentCollection, parentId, subCollection),
-            orderBy('date', 'desc') 
-        );
-
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const items: T[] = [];
-            snapshot.forEach((doc) => {
-                items.push({ ...doc.data(), id: doc.id } as T);
-            });
-            setData(items);
-            setLoading(false);
-        }, (error) => {
-            console.error("Subcollection Error:", error);
-            setLoading(false);
-        });
-
-        return () => unsubscribe();
-    }, [parentCollection, parentId, subCollection]);
-
-    const addSubItem = async (item: any) => {
-        const payload = {
-            ...item,
-            ownerId: DEFAULT_OWNER_ID, // Inherit ownership
-            createdAt: new Date().toISOString()
-        };
-        await addDoc(collection(db, parentCollection, parentId, subCollection), payload);
-    };
-
-    const deleteSubItem = async (itemId: string) => {
-        await deleteDoc(doc(db, parentCollection, parentId, subCollection, itemId));
-    };
-
-    const updateSubItem = async (itemId: string, updates: any) => {
-         await updateDoc(doc(db, parentCollection, parentId, subCollection, itemId), updates);
-    };
-
-    return { data, loading, addSubItem, deleteSubItem, updateSubItem };
-}
-
-// Hook for Single Documents
+// Hook for Single Documents (Global Settings, Configuration)
 export function useFirestoreDocument<T>(collectionName: string, docId: string, defaultValue: T) {
     const [data, setData] = useState<T>(defaultValue);
     const [loading, setLoading] = useState(true);
@@ -158,17 +96,3 @@ export function useFirestoreDocument<T>(collectionName: string, docId: string, d
 
     return { data, loading, setDocument };
 }
-
-// Helper for Subcollections (One-off writes)
-export const addSubDocument = async (parentCollection: string, parentId: string, subCollection: string, data: any) => {
-    try {
-        const path = `${parentCollection}/${parentId}/${subCollection}`;
-        await addDoc(collection(db, path), {
-            ...data,
-            ownerId: DEFAULT_OWNER_ID,
-            createdAt: new Date().toISOString()
-        });
-    } catch (e) {
-        console.error("Error adding subdocument", e);
-    }
-};

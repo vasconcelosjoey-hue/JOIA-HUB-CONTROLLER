@@ -1,6 +1,8 @@
+
 import React, { useState } from 'react';
 import { Calendar, Check, Wand2, Copy, Sparkles, ExternalLink, MessageSquare } from 'lucide-react';
-import { useLocalStorage } from '../hooks/useLocalStorage';
+import { useFirestoreDocument } from '../hooks/useFirestore';
+import { GLOBAL_SETTINGS_ID } from '../constants';
 
 interface MeetingCreatorProps {
     onBack: () => void;
@@ -20,8 +22,13 @@ export const MeetingCreator: React.FC<MeetingCreatorProps> = ({ onBack }) => {
     const [copied, setCopied] = useState(false);
     const [isThinking, setIsThinking] = useState(false);
     
-    // Persist Google Calendar Integration
-    const [isGCalConnected, setIsGCalConnected] = useLocalStorage('joia_gcal_connected', false);
+    // Persist Google Calendar Integration (Global Settings)
+    const { data: settings, setDocument: setSettings } = useFirestoreDocument<{ gcal_connected: boolean }>(
+        'settings', 
+        GLOBAL_SETTINGS_ID, 
+        { gcal_connected: false }
+    );
+    const isGCalConnected = settings?.gcal_connected ?? false;
 
     const handleGenerate = () => {
         setIsThinking(true);
@@ -73,6 +80,10 @@ export const MeetingCreator: React.FC<MeetingCreatorProps> = ({ onBack }) => {
 
         // 5. Open
         window.open(gCalUrl.toString(), '_blank');
+    };
+
+    const toggleGCal = () => {
+        setSettings({ gcal_connected: !isGCalConnected });
     };
 
     return (
@@ -157,7 +168,7 @@ export const MeetingCreator: React.FC<MeetingCreatorProps> = ({ onBack }) => {
                         {/* Moved Google Calendar Button to center above Generate Button */}
                         <div className="flex flex-col items-center justify-center pt-2">
                              <button 
-                                onClick={() => setIsGCalConnected(!isGCalConnected)}
+                                onClick={toggleGCal}
                                 className={`px-5 py-2.5 rounded-full font-bold text-xs flex items-center gap-2 transition-all border shadow-sm ${
                                     isGCalConnected 
                                     ? 'bg-green-50 border-green-200 text-green-700' 

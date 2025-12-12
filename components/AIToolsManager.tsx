@@ -1,5 +1,6 @@
+
 import React, { useState } from 'react';
-import { Bot, Plus, Trash2, Calendar, DollarSign } from 'lucide-react';
+import { Bot, Plus, Trash2, Calendar, DollarSign, Loader2 } from 'lucide-react';
 import { formatCurrency } from '../services/utils';
 import { useFirestoreCollection } from '../hooks/useFirestore';
 import { CpuArchitecture } from './ui/cpu-architecture';
@@ -13,24 +14,32 @@ interface Tool {
 
 export const AIToolsManager: React.FC = () => {
     // Switch to Firestore
-    const { data: tools, addItem, deleteItem } = useFirestoreCollection<Tool>('ai_tools');
+    const { data: tools, loading, addItem, deleteItem } = useFirestoreCollection<Tool>('ai_tools');
     
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const [newName, setNewName] = useState('');
     const [newValue, setNewValue] = useState('');
     const [newDate, setNewDate] = useState('');
 
     const handleAdd = async () => {
         if (!newName || !newValue || !newDate) return;
-        const newTool: Tool = {
-            id: Date.now().toString(),
-            name: newName,
-            value: parseFloat(newValue),
-            dueDate: parseInt(newDate)
-        };
-        await addItem(newTool);
-        setNewName('');
-        setNewValue('');
-        setNewDate('');
+        setIsSubmitting(true);
+        try {
+            // Remove 'id' to allow Firestore to generate it
+            const newTool: Omit<Tool, 'id'> = {
+                name: newName,
+                value: parseFloat(newValue),
+                dueDate: parseInt(newDate)
+            };
+            await addItem(newTool);
+            setNewName('');
+            setNewValue('');
+            setNewDate('');
+        } catch(err) {
+            console.error(err);
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const handleDelete = async (id: string) => {
@@ -107,9 +116,11 @@ export const AIToolsManager: React.FC = () => {
                         </div>
                         <button 
                             onClick={handleAdd}
-                            className="w-full bg-black text-white font-black uppercase tracking-widest py-4 rounded-xl hover:bg-gray-800 transition-all flex items-center justify-center gap-2 mt-2"
+                            disabled={isSubmitting || !newName || !newValue || !newDate}
+                            className="w-full bg-black text-white font-black uppercase tracking-widest py-4 rounded-xl hover:bg-gray-800 transition-all flex items-center justify-center gap-2 mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            <Plus size={20} strokeWidth={3} /> Adicionar
+                            {isSubmitting ? <Loader2 size={20} className="animate-spin" /> : <Plus size={20} strokeWidth={3} />}
+                            {isSubmitting ? 'Salvando...' : 'Adicionar'}
                         </button>
                     </div>
                 </div>
@@ -124,7 +135,7 @@ export const AIToolsManager: React.FC = () => {
                         </div>
                         <div className="relative z-10 flex items-center gap-4">
                             <div className="text-right hidden md:block">
-                                <p className="font-bold text-lg">{tools.length} Ferramentas</p>
+                                <p className="font-bold text-lg">{loading ? '...' : tools.length} Ferramentas</p>
                                 <p className="text-gray-400 text-sm">Ativas</p>
                             </div>
                             <div className="w-14 h-14 bg-white/10 rounded-full flex items-center justify-center backdrop-blur-sm">
@@ -140,12 +151,16 @@ export const AIToolsManager: React.FC = () => {
                         <div className="p-6 border-b border-gray-200 bg-gray-50">
                             <h3 className="font-black text-black">Ferramentas Ativas</h3>
                         </div>
-                        <div className="divide-y divide-gray-100">
-                            {tools.length === 0 ? (
+                        <div className="divide-y divide-gray-100 min-h-[100px]">
+                            {loading ? (
+                                <div className="p-8 flex items-center justify-center text-gray-400">
+                                    <Loader2 size={24} className="animate-spin mr-2"/> Carregando...
+                                </div>
+                            ) : tools.length === 0 ? (
                                 <div className="p-8 text-center text-gray-400 font-medium">Nenhuma ferramenta cadastrada.</div>
                             ) : (
                                 tools.map(tool => (
-                                    <div key={tool.id} className="p-5 flex items-center justify-between hover:bg-gray-50 transition-colors group">
+                                    <div key={tool.id} className="p-5 flex items-center justify-between hover:bg-gray-50 transition-colors group animate-in fade-in">
                                         <div className="flex items-center gap-4">
                                             <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100">
                                                 <Bot size={20} />

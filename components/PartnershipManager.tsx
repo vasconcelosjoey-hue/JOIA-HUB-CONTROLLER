@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Users, Plus, Trash2, Calculator, AlertTriangle, CheckCircle2, DollarSign, Building2, Save, Calendar } from 'lucide-react';
+import { Users, Plus, Trash2, Calculator, AlertTriangle, CheckCircle2, DollarSign, Building2, Save, Calendar, Loader2 } from 'lucide-react';
 import { formatCurrency } from '../services/utils';
 import { Partner, PartnershipCard } from '../types';
 import { useFirestoreCollection } from '../hooks/useFirestore';
@@ -14,14 +14,20 @@ interface PartnershipManagerProps {
 // Rewriting to use internal hook instead of props for data source to ensure consistency with other modules
 export const PartnershipManager: React.FC<PartnershipManagerProps> = () => {
     // Switch to Firestore
-    const { data: cards, addItem, deleteItem } = useFirestoreCollection<PartnershipCard>('partnerships');
+    const { data: cards, loading, addItem, deleteItem } = useFirestoreCollection<PartnershipCard>('partnerships');
+
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     // Form States
     const [companyName, setCompanyName] = useState('');
     const [totalValue, setTotalValue] = useState<string>('');
     const [dueDay, setDueDay] = useState<string>('');
+    
+    // Internal Helper for random unique string for UI list keys
+    const generateId = () => Math.random().toString(36).substring(2, 9);
+
     const [partners, setPartners] = useState<Partner[]>([
-        { id: Date.now().toString(), name: '', value: 0 }
+        { id: generateId(), name: '', value: 0 }
     ]);
 
     // Derived States for Calculation
@@ -31,7 +37,7 @@ export const PartnershipManager: React.FC<PartnershipManagerProps> = () => {
     const isBalanced = Math.abs(difference) < 0.05; // Allowing float small margin
 
     const handleAddPartnerInput = () => {
-        setPartners([...partners, { id: Date.now().toString(), name: '', value: 0 }]);
+        setPartners([...partners, { id: generateId(), name: '', value: 0 }]);
     };
 
     const handleRemovePartnerInput = (id: string) => {
@@ -70,23 +76,28 @@ export const PartnershipManager: React.FC<PartnershipManagerProps> = () => {
 
     const handleSaveCard = async () => {
         if (!companyName || numericTotal <= 0 || !isBalanced || !dueDay) return;
-        
-        // Use 'any' type here because addItem hook handles injection of ownerId, createdAt, etc.
-        const newCard: any = {
-            id: Date.now().toString(),
-            companyName,
-            totalValue: numericTotal,
-            dueDay: parseInt(dueDay),
-            partners: [...partners] // Copy
-        };
+        setIsSubmitting(true);
+        try {
+            // Remove 'id' to let Firestore generate it
+            const newCard: any = {
+                companyName,
+                totalValue: numericTotal,
+                dueDay: parseInt(dueDay),
+                partners: [...partners] // Copy
+            };
 
-        await addItem(newCard);
-        
-        // Reset Form
-        setCompanyName('');
-        setTotalValue('');
-        setDueDay('');
-        setPartners([{ id: Date.now().toString(), name: '', value: 0 }]);
+            await addItem(newCard);
+            
+            // Reset Form
+            setCompanyName('');
+            setTotalValue('');
+            setDueDay('');
+            setPartners([{ id: generateId(), name: '', value: 0 }]);
+        } catch(err) {
+            console.error(err);
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const handleConfirmDelete = async (id: string) => {
@@ -261,14 +272,15 @@ export const PartnershipManager: React.FC<PartnershipManagerProps> = () => {
                         {/* Action */}
                         <button 
                             onClick={handleSaveCard}
-                            disabled={!isBalanced || !companyName || numericTotal <= 0 || !dueDay}
+                            disabled={isSubmitting || !isBalanced || !companyName || numericTotal <= 0 || !dueDay}
                             className={`w-full py-4 rounded-xl font-black uppercase tracking-widest text-sm flex items-center justify-center gap-2 transition-all shadow-lg ${
                                 isBalanced && companyName && numericTotal > 0 && dueDay
                                 ? 'bg-black text-white hover:bg-gray-800 hover:scale-[1.01]' 
                                 : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                             }`}
                         >
-                            <Save size={18} /> Criar Card de Parceria
+                            {isSubmitting ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
+                            {isSubmitting ? 'Salvando...' : 'Criar Card de Parceria'}
                         </button>
                     </div>
                 </div>
@@ -277,17 +289,23 @@ export const PartnershipManager: React.FC<PartnershipManagerProps> = () => {
                 <div className="space-y-6">
                     <div className="flex items-center justify-between">
                         <h3 className="font-black text-xl text-gray-800">Contratos Ativos</h3>
-                        <span className="bg-gray-200 text-gray-600 text-xs font-bold px-3 py-1 rounded-full">{cards.length}</span>
+                        <span className="bg-gray-200 text-gray-600 text-xs font-bold px-3 py-1 rounded-full">
+                            {loading ? '...' : cards.length}
+                        </span>
                     </div>
 
-                    <div className="grid grid-cols-1 gap-6">
-                        {cards.length === 0 ? (
+                    <div className="grid grid-cols-1 gap-6 min-h-[100px]">
+                        {loading ? (
+                            <div className="p-12 flex items-center justify-center text-gray-400">
+                                <Loader2 size={32} className="animate-spin mr-2"/> Carregando...
+                            </div>
+                        ) : cards.length === 0 ? (
                             <div className="text-center py-10 text-gray-400 border-2 border-dashed border-gray-200 rounded-3xl">
                                 Nenhuma parceria cadastrada.
                             </div>
                         ) : (
                             cards.map(card => (
-                                <div key={card.id} className="bg-white rounded-3xl p-6 shadow-apple hover:shadow-float transition-all duration-300 border border-gray-100 group relative">
+                                <div key={card.id} className="bg-white rounded-3xl p-6 shadow-apple hover:shadow-float transition-all duration-300 border border-gray-100 group relative animate-in fade-in">
                                     <button 
                                         onClick={() => handleConfirmDelete(card.id)}
                                         className="absolute top-6 right-6 text-gray-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"

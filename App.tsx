@@ -6,12 +6,11 @@ import { AIToolsManager } from './components/AIToolsManager';
 import { PlatformManager } from './components/PlatformManager';
 import { PartnershipManager } from './components/PartnershipManager';
 import { NotificationCenter } from './components/NotificationCenter';
-import { WalletLogin } from './components/WalletLogin';
-import { LayoutGrid, CalendarPlus, Bot, Layers, CreditCard, Bell, Wallet } from 'lucide-react';
+import { LayoutGrid, CalendarPlus, Bot, Layers, CreditCard, Bell } from 'lucide-react';
 import { useNotifications } from './hooks/useNotifications';
 
 // Define Views
-type View = 'dashboard' | 'meetings' | 'ai-tools' | 'platforms' | 'partnership' | 'wallet';
+type View = 'dashboard' | 'meetings' | 'ai-tools' | 'platforms' | 'partnership';
 
 function App() {
   const [currentView, setCurrentView] = useState<View>('dashboard');
@@ -34,13 +33,11 @@ function App() {
       case 'ai-tools': return <AIToolsManager />;
       case 'platforms': return <PlatformManager />;
       case 'partnership': return <PartnershipManager onAddCard={() => {}} onDeleteCard={() => {}} cards={[]} />;
-      case 'wallet': return <WalletLogin />;
       default: return <Dashboard />;
     }
   };
 
   const getPageTitle = () => {
-      if (currentView === 'wallet') return 'Minha Carteira';
       const item = navItems.find(i => i.id === currentView);
       return item ? item.label : 'Dashboard';
   }
@@ -134,17 +131,7 @@ function App() {
           </div>
 
           <div className="flex items-center gap-4">
-             <button 
-                onClick={() => setCurrentView('wallet')}
-                className={`flex items-center gap-2 px-5 py-2.5 rounded-full border transition-all text-xs font-bold uppercase tracking-wide ${
-                    currentView === 'wallet'
-                    ? 'bg-black text-white border-black shadow-lg transform scale-105'
-                    : 'bg-white text-black border-gray-200 hover:border-black hover:shadow-sm'
-                }`}
-             >
-                <Wallet size={16} strokeWidth={2.5} />
-                Minha Carteira
-             </button>
+            {/* Header Actions can go here */}
           </div>
         </header>
 

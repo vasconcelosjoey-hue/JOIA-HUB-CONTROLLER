@@ -1,10 +1,8 @@
 
-
 // Constants for the System
 
-// In a real app, this comes from Firebase Auth Context
-// For this version, we use a fixed ID to satisfy the "ownerId" requirement for the Data Model
-export const DEFAULT_OWNER_ID = "admin_workspace_v1";
+// Single Global ID for app-wide settings (e.g. Google Calendar Auth state)
+export const GLOBAL_SETTINGS_ID = "global_app_settings";
 
 export const DEFAULT_CURRENCY = "BRL";
 

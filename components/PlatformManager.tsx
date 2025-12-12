@@ -1,5 +1,6 @@
+
 import React, { useState } from 'react';
-import { Layers, Plus, Trash2, Calendar, User, Search } from 'lucide-react';
+import { Layers, Plus, Trash2, Calendar, User, Search, Loader2 } from 'lucide-react';
 import { formatCurrency } from '../services/utils';
 import { useFirestoreCollection } from '../hooks/useFirestore';
 
@@ -13,8 +14,9 @@ interface Platform {
 
 export const PlatformManager: React.FC = () => {
     // Switch to Firestore
-    const { data: platforms, addItem, deleteItem } = useFirestoreCollection<Platform>('platforms');
+    const { data: platforms, loading, addItem, deleteItem } = useFirestoreCollection<Platform>('platforms');
     
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const [newName, setNewName] = useState('');
     const [newClient, setNewClient] = useState('');
     const [newValue, setNewValue] = useState('');
@@ -23,18 +25,25 @@ export const PlatformManager: React.FC = () => {
 
     const handleAdd = async () => {
         if (!newName || !newClient || !newValue || !newDate) return;
-        const newPlat: Platform = {
-            id: Date.now().toString(),
-            name: newName,
-            client: newClient,
-            value: parseFloat(newValue),
-            dueDate: parseInt(newDate)
-        };
-        await addItem(newPlat);
-        setNewName('');
-        setNewClient('');
-        setNewValue('');
-        setNewDate('');
+        setIsSubmitting(true);
+        try {
+            // Remove 'id' to allow Firestore to generate it
+            const newPlat: Omit<Platform, 'id'> = {
+                name: newName,
+                client: newClient,
+                value: parseFloat(newValue),
+                dueDate: parseInt(newDate)
+            };
+            await addItem(newPlat);
+            setNewName('');
+            setNewClient('');
+            setNewValue('');
+            setNewDate('');
+        } catch(err) {
+            console.error(err);
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const handleDelete = async (id: string) => {
@@ -121,9 +130,11 @@ export const PlatformManager: React.FC = () => {
                         </div>
                         <button 
                             onClick={handleAdd}
-                            className="w-full bg-black text-white font-black uppercase tracking-widest py-4 rounded-xl hover:bg-gray-800 transition-all flex items-center justify-center gap-2 mt-2"
+                            disabled={isSubmitting || !newName || !newClient || !newValue || !newDate}
+                            className="w-full bg-black text-white font-black uppercase tracking-widest py-4 rounded-xl hover:bg-gray-800 transition-all flex items-center justify-center gap-2 mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            <Plus size={20} strokeWidth={3} /> Registrar
+                            {isSubmitting ? <Loader2 size={20} className="animate-spin" /> : <Plus size={20} strokeWidth={3} />}
+                            {isSubmitting ? 'Salvando...' : 'Registrar'}
                         </button>
                     </div>
                 </div>
@@ -152,14 +163,20 @@ export const PlatformManager: React.FC = () => {
                     <div className="bg-white rounded-3xl shadow-apple border border-gray-200 overflow-hidden">
                         <div className="p-6 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
                             <h3 className="font-black text-black">Contas Cadastradas</h3>
-                            <span className="bg-black text-white text-xs font-bold px-3 py-1 rounded-full">{filteredPlatforms.length}</span>
+                            <span className="bg-black text-white text-xs font-bold px-3 py-1 rounded-full">
+                                {loading ? '...' : filteredPlatforms.length}
+                            </span>
                         </div>
-                        <div className="divide-y divide-gray-100">
-                            {filteredPlatforms.length === 0 ? (
+                        <div className="divide-y divide-gray-100 min-h-[100px]">
+                            {loading ? (
+                                <div className="p-8 flex items-center justify-center text-gray-400">
+                                    <Loader2 size={24} className="animate-spin mr-2"/> Carregando...
+                                </div>
+                            ) : filteredPlatforms.length === 0 ? (
                                 <div className="p-8 text-center text-gray-400 font-medium">Nenhuma conta encontrada.</div>
                             ) : (
                                 filteredPlatforms.map(plat => (
-                                    <div key={plat.id} className="p-5 flex flex-col md:flex-row md:items-center justify-between hover:bg-gray-50 transition-colors group gap-4">
+                                    <div key={plat.id} className="p-5 flex flex-col md:flex-row md:items-center justify-between hover:bg-gray-50 transition-colors group gap-4 animate-in fade-in">
                                         <div className="flex items-center gap-4">
                                             <div className="w-12 h-12 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center border border-orange-100 shrink-0">
                                                 <Layers size={22} />
