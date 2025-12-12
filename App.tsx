@@ -8,14 +8,29 @@ import { PartnershipManager } from './components/PartnershipManager';
 import { NotificationCenter } from './components/NotificationCenter';
 import { LayoutGrid, CalendarPlus, Bot, Layers, CreditCard, Bell } from 'lucide-react';
 import { useNotifications } from './hooks/useNotifications';
+import { useFirestoreDocument } from './hooks/useFirestore';
+import { GLOBAL_SETTINGS_ID } from './constants';
 
 // Define Views
 type View = 'dashboard' | 'meetings' | 'ai-tools' | 'platforms' | 'partnership';
 
 function App() {
-  const [currentView, setCurrentView] = useState<View>('dashboard');
   const [isAlertsOpen, setIsAlertsOpen] = useState(false);
   const { alerts: activeAlerts } = useNotifications();
+
+  // Persistence: Active View (Rehydrates from Firestore)
+  // Shared global settings document
+  const { data: settings, setDocument: updateSettings } = useFirestoreDocument(
+      'settings', 
+      GLOBAL_SETTINGS_ID, 
+      { lastView: 'dashboard' }
+  );
+
+  const currentView = (settings as any)?.lastView || 'dashboard';
+
+  const setCurrentView = (view: View) => {
+      updateSettings({ lastView: view });
+  };
 
   // Navigation Items
   const navItems = [
