@@ -123,7 +123,7 @@ function App() {
               </motion.div>
 
               {/* CENTRAL LAYOUT */}
-              <div className="relative w-full max-w-5xl h-full flex flex-col md:block items-center justify-center mt-20 md:mt-0">
+              <div className="relative w-full max-w-5xl h-full min-h-[600px] flex flex-col md:flex-row items-center justify-center mt-20 md:mt-0">
                   
                   {/* --- NEURAL CORE --- */}
                   <motion.div 
@@ -153,35 +153,54 @@ function App() {
 
                       {/* Satellite Buttons (Pointer events auto to allow clicking) */}
                       <div className="pointer-events-auto w-full h-full relative">
-                        {/* Top */}
-                        <motion.div variants={itemVariants} className="absolute top-8 left-1/2 -translate-x-1/2">
-                           {renderHubButton('dashboard', <LayoutGrid size={24} strokeWidth={2} />, 'Projetos')}
-                        </motion.div>
+                        {/* 
+                            GRID SYSTEM: 600x600 Container
+                            Center: 300, 300
+                            Radius: 260px
+                            Positions calculated to form a perfect hexagon with Top at 0deg
+                        */}
+
+                        {/* 1. Top (Projetos) - (300, 40) */}
+                        <div className="absolute left-1/2 top-[40px] -translate-x-1/2 -translate-y-1/2">
+                            <motion.div variants={itemVariants}>
+                                {renderHubButton('dashboard', <LayoutGrid size={24} strokeWidth={2} />, 'Projetos')}
+                            </motion.div>
+                        </div>
                         
-                        {/* Top Right */}
-                        <motion.div variants={itemVariants} className="absolute top-[20%] right-[10%]">
-                           {renderHubButton('meetings', <CalendarPlus size={24} strokeWidth={2} />, 'Reunião')}
-                        </motion.div>
+                        {/* 2. Top Right (Reunião) - (525, 170) */}
+                        <div className="absolute left-[525px] top-[170px] -translate-x-1/2 -translate-y-1/2">
+                            <motion.div variants={itemVariants}>
+                                {renderHubButton('meetings', <CalendarPlus size={24} strokeWidth={2} />, 'Reunião')}
+                            </motion.div>
+                        </div>
 
-                        {/* Bottom Right */}
-                        <motion.div variants={itemVariants} className="absolute bottom-[20%] right-[10%]">
-                           {renderHubButton('ai-tools', <Bot size={24} strokeWidth={2} />, 'Tools IA')}
-                        </motion.div>
+                        {/* 3. Bottom Right (Tools IA) - (525, 430) */}
+                        <div className="absolute left-[525px] top-[430px] -translate-x-1/2 -translate-y-1/2">
+                            <motion.div variants={itemVariants}>
+                                {renderHubButton('ai-tools', <Bot size={24} strokeWidth={2} />, 'Tools IA')}
+                            </motion.div>
+                        </div>
 
-                        {/* Bottom */}
-                        <motion.div variants={itemVariants} className="absolute bottom-8 left-1/2 -translate-x-1/2">
-                           {renderHubButton('partnership', <CreditCard size={24} strokeWidth={2} />, 'Parceria')}
-                        </motion.div>
+                        {/* 4. Bottom (Parceria) - (300, 560) */}
+                        <div className="absolute left-1/2 top-[560px] -translate-x-1/2 -translate-y-1/2">
+                            <motion.div variants={itemVariants}>
+                                {renderHubButton('partnership', <CreditCard size={24} strokeWidth={2} />, 'Parceria')}
+                            </motion.div>
+                        </div>
 
-                         {/* Bottom Left */}
-                         <motion.div variants={itemVariants} className="absolute bottom-[20%] left-[10%]">
-                           {renderHubButton('platforms', <Layers size={24} strokeWidth={2} />, 'Mensal')}
-                        </motion.div>
+                         {/* 5. Bottom Left (Mensal) - (75, 430) */}
+                         <div className="absolute left-[75px] top-[430px] -translate-x-1/2 -translate-y-1/2">
+                            <motion.div variants={itemVariants}>
+                                {renderHubButton('platforms', <Layers size={24} strokeWidth={2} />, 'Mensal')}
+                            </motion.div>
+                        </div>
 
-                        {/* Top Left */}
-                        <motion.div variants={itemVariants} className="absolute top-[20%] left-[10%]">
-                           {renderHubButton('alerts', <Bell size={24} strokeWidth={2} />, 'Alertas', '', true)}
-                        </motion.div>
+                        {/* 6. Top Left (Alertas) - (75, 170) */}
+                        <div className="absolute left-[75px] top-[170px] -translate-x-1/2 -translate-y-1/2">
+                            <motion.div variants={itemVariants}>
+                                {renderHubButton('alerts', <Bell size={24} strokeWidth={2} />, 'Alertas', '', true)}
+                            </motion.div>
+                        </div>
                       </div>
                   </div>
 
