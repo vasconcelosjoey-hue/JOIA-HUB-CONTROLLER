@@ -134,7 +134,7 @@ export const Dashboard: React.FC = () => {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6">
         <div>
             <h2 className="text-3xl md:text-4xl font-black text-black tracking-tight flex items-center gap-3">
-                <Briefcase size={28} md:size={32} strokeWidth={2.5}/>
+                <Briefcase className="w-7 h-7 md:w-8 md:h-8" strokeWidth={2.5}/>
                 Projetos
             </h2>
             <p className="text-gray-600 font-medium mt-1 text-base md:text-lg">Carteira de clientes ativa.</p>

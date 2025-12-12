@@ -110,7 +110,7 @@ export const PartnershipManager: React.FC<PartnershipManagerProps> = () => {
         <div className="space-y-8 animate-in slide-in-from-bottom duration-500 pb-20">
              <div className="text-center md:text-left">
                 <h2 className="text-3xl md:text-4xl font-black text-black tracking-tight flex items-center justify-center md:justify-start gap-3">
-                    <Users size={28} md:size={32} className="text-black" strokeWidth={2.5} />
+                    <Users className="w-7 h-7 md:w-8 md:h-8" strokeWidth={2.5} />
                     Parcerias
                 </h2>
                 <p className="text-gray-600 font-medium mt-1 text-base md:text-lg">Divisão de receitas e rateio entre atores.</p>
@@ -306,7 +306,7 @@ export const PartnershipManager: React.FC<PartnershipManagerProps> = () => {
                         </span>
                     </div>
 
-                    <div className="grid grid-cols-1 gap-6 min-h-[100px]">
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-1 gap-6 min-h-[100px]">
                         {loading ? (
                             <div className="p-12 flex items-center justify-center text-gray-400">
                                 <Loader2 size={32} className="animate-spin mr-2"/> Carregando...

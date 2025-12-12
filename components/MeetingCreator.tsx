@@ -92,7 +92,7 @@ export const MeetingCreator: React.FC<MeetingCreatorProps> = ({ onBack }) => {
             <div className="flex flex-col md:flex-row items-center justify-between mb-8 gap-4">
                  <div className="text-center md:text-left">
                     <h2 className="text-3xl font-black text-black tracking-tight flex items-center justify-center md:justify-start gap-2">
-                        <Sparkles size={28} className="text-purple-600 fill-purple-600" strokeWidth={1.5}/>
+                        <Sparkles className="w-7 h-7 md:w-8 md:h-8 text-purple-600 fill-purple-600" strokeWidth={1.5}/>
                         Smart Meeting
                     </h2>
                     <p className="text-gray-600 font-semibold mt-1 text-center md:text-left">Gere convites perfeitos em segundos.</p>

@@ -59,7 +59,7 @@ export const AIToolsManager: React.FC = () => {
                 </div>
                 
                 <h2 className="text-4xl font-black text-black tracking-tight flex items-center justify-center md:justify-start gap-3 relative z-10">
-                    <Bot size={32} className="text-black" strokeWidth={2.5} />
+                    <Bot className="w-8 h-8 md:w-9 md:h-9" strokeWidth={2.5} />
                     Ferramentas IA
                 </h2>
                 <p className="text-gray-600 font-medium mt-1 text-lg relative z-10">Gerenciamento de assinaturas e custos operacionais.</p>

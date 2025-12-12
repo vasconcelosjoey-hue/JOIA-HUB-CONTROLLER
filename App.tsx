@@ -6,7 +6,7 @@ import { AIToolsManager } from './components/AIToolsManager';
 import { PlatformManager } from './components/PlatformManager';
 import { PartnershipManager } from './components/PartnershipManager';
 import { NotificationCenter } from './components/NotificationCenter';
-import { LayoutGrid, CalendarPlus, Bot, Layers, CreditCard, Bell, Menu } from 'lucide-react';
+import { LayoutGrid, CalendarPlus, Bot, Layers, CreditCard, Bell } from 'lucide-react';
 import { useNotifications } from './hooks/useNotifications';
 import { useFirestoreDocument } from './hooks/useFirestore';
 import { GLOBAL_SETTINGS_ID } from './constants';
@@ -60,7 +60,7 @@ function App() {
   }
 
   return (
-    <div className="flex h-screen w-screen bg-[#F5F5F7] text-black font-sans overflow-hidden">
+    <div className="flex h-screen w-full bg-[#F5F5F7] text-black font-sans overflow-hidden">
       
       {/* GLOBAL NOTIFICATIONS (Toast/Modal) */}
       <NotificationCenter 
@@ -182,7 +182,7 @@ function App() {
         </main>
 
         {/* --- MOBILE BOTTOM NAVIGATION (Visible only on Mobile) --- */}
-        <nav className="md:hidden fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 pb-safe z-30 flex justify-around items-center px-2 py-3 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+        <nav className="md:hidden fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 z-30 flex justify-around items-center px-2 py-3 pb-6 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = currentView === item.id;

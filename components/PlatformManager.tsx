@@ -63,7 +63,7 @@ export const PlatformManager: React.FC = () => {
         <div className="space-y-8 animate-in slide-in-from-left duration-500">
              <div className="text-center md:text-left">
                 <h2 className="text-4xl font-black text-black tracking-tight flex items-center justify-center md:justify-start gap-3">
-                    <Layers size={32} className="text-black" strokeWidth={2.5} />
+                    <Layers className="w-8 h-8 md:w-9 md:h-9" strokeWidth={2.5} />
                     Mensalidades
                 </h2>
                 <p className="text-gray-600 font-medium mt-1 text-lg">Custos de ativação e plataformas de clientes.</p>
