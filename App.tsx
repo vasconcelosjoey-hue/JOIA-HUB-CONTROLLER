@@ -1,6 +1,5 @@
 
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { Dashboard } from './components/Dashboard';
 import { MeetingCreator } from './components/MeetingCreator';
 import { AIToolsManager } from './components/AIToolsManager';
@@ -8,271 +7,154 @@ import { PlatformManager } from './components/PlatformManager';
 import { PartnershipManager } from './components/PartnershipManager';
 import { NotificationCenter } from './components/NotificationCenter';
 import { WalletLogin } from './components/WalletLogin';
-import { LayoutGrid, CalendarPlus, ArrowLeft, CreditCard, Bell, Bot, Layers, Wallet } from 'lucide-react';
-import { NeuralCore } from './components/ui/NeuralCore';
+import { LayoutGrid, CalendarPlus, Bot, Layers, CreditCard, Bell, Wallet } from 'lucide-react';
 import { useNotifications } from './hooks/useNotifications';
 
-type View = 'hub' | 'dashboard' | 'meetings' | 'alerts' | 'ai-tools' | 'platforms' | 'wallet' | 'partnership';
+// Define Views
+type View = 'dashboard' | 'meetings' | 'ai-tools' | 'platforms' | 'partnership' | 'wallet';
 
 function App() {
-  const [currentView, setCurrentView] = useState<View>('hub');
+  const [currentView, setCurrentView] = useState<View>('dashboard');
   const [isAlertsOpen, setIsAlertsOpen] = useState(false);
-  
-  // Centralized Notification Logic
   const { alerts: activeAlerts } = useNotifications();
 
-  // --- COMPONENTS FOR HUB BUTTONS ---
-  const renderHubButton = (
-      view: View | 'alerts', 
-      icon: React.ReactNode, 
-      label: string, 
-      positionClasses: string = '',
-      isAlert: boolean = false
-  ) => {
-      const isWallet = view === 'wallet';
-      
-      const handleClick = () => {
-          if (view === 'alerts') setIsAlertsOpen(true);
-          else setCurrentView(view as View);
-      }
+  // Navigation Items
+  const navItems = [
+    { id: 'dashboard', label: 'Projetos', icon: LayoutGrid },
+    { id: 'meetings', label: 'Reuniões', icon: CalendarPlus },
+    { id: 'ai-tools', label: 'Tools IA', icon: Bot },
+    { id: 'platforms', label: 'Mensalidades', icon: Layers },
+    { id: 'partnership', label: 'Parcerias', icon: CreditCard },
+  ];
 
-      return (
-        <motion.button 
-            whileHover={{ scale: 1.1, y: -5 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={handleClick}
-            className={`${positionClasses} bg-white/80 backdrop-blur-xl rounded-3xl shadow-apple hover:shadow-float transition-all duration-300 flex flex-col items-center justify-center group border border-white/50 z-50 cursor-pointer relative ${isWallet ? 'px-6 py-3 flex-row gap-3' : 'w-24 h-24'}`}
-        >
-            <div className={`
-                ${isWallet ? 'w-8 h-8' : 'mb-2 p-3'} 
-                rounded-2xl transition-colors flex items-center justify-center
-                ${isAlert && activeAlerts.length > 0 
-                    ? 'bg-red-50 text-red-500 group-hover:bg-red-500 group-hover:text-white' 
-                    : 'bg-gray-50 text-black group-hover:bg-black group-hover:text-white'
-                }
-                ${isWallet ? 'bg-black text-white' : ''}
-            `}>
-                {icon}
-                {isAlert && activeAlerts.length > 0 && (
-                    <span className="absolute -top-1 -right-1 flex h-3 w-3">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
-                    </span>
-                )}
-            </div>
-            <span className={`font-bold text-gray-800 group-hover:text-black uppercase tracking-wide ${isWallet ? 'text-sm' : 'text-[10px]'}`}>
-                {label}
-            </span>
-        </motion.button>
-      );
-  }
-
-  // Animation Variants
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    show: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1,
-        delayChildren: 0.3
-      }
-    },
-    exit: {
-      opacity: 0,
-      scale: 1.2,
-      transition: { duration: 0.5 }
+  const renderContent = () => {
+    switch (currentView) {
+      case 'dashboard': return <Dashboard />;
+      case 'meetings': return <MeetingCreator onBack={() => {}} />;
+      case 'ai-tools': return <AIToolsManager />;
+      case 'platforms': return <PlatformManager />;
+      case 'partnership': return <PartnershipManager onAddCard={() => {}} onDeleteCard={() => {}} cards={[]} />;
+      case 'wallet': return <WalletLogin />;
+      default: return <Dashboard />;
     }
   };
 
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20, scale: 0.8 },
-    show: { opacity: 1, y: 0, scale: 1, transition: { type: "spring", stiffness: 200, damping: 20 } }
-  };
-
-  const pageVariants = {
-      initial: { opacity: 0, scale: 0.9, filter: 'blur(10px)' },
-      animate: { opacity: 1, scale: 1, filter: 'blur(0px)', transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] } },
-      exit: { opacity: 0, scale: 1.1, filter: 'blur(10px)', transition: { duration: 0.3 } }
-  };
+  const getPageTitle = () => {
+      if (currentView === 'wallet') return 'Minha Carteira';
+      const item = navItems.find(i => i.id === currentView);
+      return item ? item.label : 'Dashboard';
+  }
 
   return (
-    <div className="min-h-screen bg-apple-bg text-black font-sans selection:bg-black selection:text-white relative overflow-hidden">
+    <div className="flex h-screen w-screen bg-[#F5F5F7] text-black font-sans overflow-hidden">
       
+      {/* GLOBAL NOTIFICATIONS (Toast/Modal) */}
       <NotificationCenter 
           isOpen={isAlertsOpen} 
           onClose={() => setIsAlertsOpen(false)} 
           alerts={activeAlerts} 
       />
 
-      <AnimatePresence mode="wait">
-        {currentView === 'hub' ? (
-          <motion.div 
-            key="hub"
-            variants={containerVariants}
-            initial="hidden"
-            animate="show"
-            exit="exit"
-            className="w-screen h-screen relative overflow-hidden bg-apple-bg"
-          >
-              {/* Background Glow */}
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-to-tr from-gray-200 to-transparent rounded-full opacity-30 blur-[100px] -z-10" />
+      {/* SIDEBAR */}
+      <aside className="w-64 bg-white border-r border-gray-200 flex flex-col justify-between shrink-0 z-20">
+        <div>
+          <div className="h-16 flex items-center px-6 border-b border-gray-100">
+             <div className="w-8 h-8 bg-black rounded-xl flex items-center justify-center text-white font-black text-xs mr-3 shadow-sm">
+                J.
+             </div>
+             <span className="font-bold text-lg tracking-tight text-black">JoI.A. HUB</span>
+          </div>
 
-              {/* Wallet Button (Fixed Top Right) */}
-              <motion.div variants={itemVariants} className="absolute top-6 right-6 z-[60]">
-                  {renderHubButton('wallet', <Wallet size={16} />, 'WALLET', '', false)}
-              </motion.div>
+          <nav className="p-4 space-y-1">
+            <p className="px-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 mt-2">Menu Principal</p>
+            
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = currentView === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => setCurrentView(item.id as View)}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all duration-200 ${
+                    isActive 
+                      ? 'bg-black text-white shadow-lg' 
+                      : 'text-gray-500 hover:bg-gray-50 hover:text-black'
+                  }`}
+                >
+                  <Icon size={18} strokeWidth={isActive ? 2.5 : 2} />
+                  {item.label}
+                </button>
+              );
+            })}
 
-              {/* --- DESKTOP ORBITAL SYSTEM (Centered 600x600 Container) --- */}
-              <div className="hidden md:block absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px]">
-                  
-                  {/* Orbit Rings */}
-                  <motion.div 
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 0.5, scale: 1 }}
-                    transition={{ duration: 1.5, delay: 0.5 }}
-                    className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[450px] h-[450px] border border-gray-300 rounded-full pointer-events-none" 
-                  />
-                  <motion.div 
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 0.3, scale: 1 }}
-                    transition={{ duration: 1.5, delay: 0.7 }}
-                    className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] border border-dashed border-gray-300 rounded-full pointer-events-none" 
-                  />
-
-                  {/* Neural Core (Center) */}
-                  <motion.div 
-                    initial={{ scale: 0, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    transition={{ duration: 1, ease: "backOut", delay: 0.2 }}
-                    className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-30 w-48 h-48 bg-white/50 backdrop-blur-xl rounded-full shadow-float flex items-center justify-center border border-white/60"
-                  >
-                      <NeuralCore className="w-full h-full text-black opacity-90" />
-                  </motion.div>
-
-                  {/* Satellite Buttons (Absolute positions in 600x600) */}
-                  
-                  {/* 1. Top (Projetos) */}
-                  <div className="absolute left-1/2 top-[40px] -translate-x-1/2 -translate-y-1/2 z-40">
-                      <motion.div variants={itemVariants}>
-                          {renderHubButton('dashboard', <LayoutGrid size={24} strokeWidth={2} />, 'Projetos')}
-                      </motion.div>
-                  </div>
-                  
-                  {/* 2. Top Right (Reunião) */}
-                  <div className="absolute left-[525px] top-[170px] -translate-x-1/2 -translate-y-1/2 z-40">
-                      <motion.div variants={itemVariants}>
-                          {renderHubButton('meetings', <CalendarPlus size={24} strokeWidth={2} />, 'Reunião')}
-                      </motion.div>
-                  </div>
-
-                  {/* 3. Bottom Right (Tools IA) */}
-                  <div className="absolute left-[525px] top-[430px] -translate-x-1/2 -translate-y-1/2 z-40">
-                      <motion.div variants={itemVariants}>
-                          {renderHubButton('ai-tools', <Bot size={24} strokeWidth={2} />, 'Tools IA')}
-                      </motion.div>
-                  </div>
-
-                  {/* 4. Bottom (Parceria) */}
-                  <div className="absolute left-1/2 top-[560px] -translate-x-1/2 -translate-y-1/2 z-40">
-                      <motion.div variants={itemVariants}>
-                          {renderHubButton('partnership', <CreditCard size={24} strokeWidth={2} />, 'Parceria')}
-                      </motion.div>
-                  </div>
-
-                   {/* 5. Bottom Left (Mensal) */}
-                   <div className="absolute left-[75px] top-[430px] -translate-x-1/2 -translate-y-1/2 z-40">
-                      <motion.div variants={itemVariants}>
-                          {renderHubButton('platforms', <Layers size={24} strokeWidth={2} />, 'Mensal')}
-                      </motion.div>
-                  </div>
-
-                  {/* 6. Top Left (Alertas) */}
-                  <div className="absolute left-[75px] top-[170px] -translate-x-1/2 -translate-y-1/2 z-40">
-                      <motion.div variants={itemVariants}>
-                          {renderHubButton('alerts', <Bell size={24} strokeWidth={2} />, 'Alertas', '', true)}
-                      </motion.div>
-                  </div>
-              </div>
-
-              {/* --- MOBILE GRID (Fallback for < md) --- */}
-              <div className="md:hidden w-full h-full flex flex-col items-center justify-center p-6 pt-20">
-                  <motion.div 
-                    initial={{ scale: 0 }} 
-                    animate={{ scale: 1 }} 
-                    className="w-32 h-32 bg-white/50 backdrop-blur-xl rounded-full shadow-float flex items-center justify-center border border-white/60 mb-8"
-                  >
-                        <NeuralCore className="w-full h-full text-black opacity-90" />
-                  </motion.div>
-
-                  <motion.div 
-                    variants={containerVariants}
-                    className="grid grid-cols-2 gap-4 w-full max-w-sm"
-                  >
-                       <motion.div variants={itemVariants}>{renderHubButton('dashboard', <LayoutGrid size={24} strokeWidth={2} />, 'Projetos', 'w-full aspect-square')}</motion.div>
-                       <motion.div variants={itemVariants}>{renderHubButton('meetings', <CalendarPlus size={24} strokeWidth={2} />, 'Reunião', 'w-full aspect-square')}</motion.div>
-                       <motion.div variants={itemVariants}>{renderHubButton('ai-tools', <Bot size={24} strokeWidth={2} />, 'Tools IA', 'w-full aspect-square')}</motion.div>
-                       <motion.div variants={itemVariants}>{renderHubButton('partnership', <CreditCard size={24} strokeWidth={2} />, 'Parceria', 'w-full aspect-square')}</motion.div>
-                       <motion.div variants={itemVariants}>{renderHubButton('platforms', <Layers size={24} strokeWidth={2} />, 'Mensal', 'w-full aspect-square')}</motion.div>
-                       <motion.div variants={itemVariants}>{renderHubButton('alerts', <Bell size={24} strokeWidth={2} />, 'Alertas', 'w-full aspect-square', true)}</motion.div>
-                  </motion.div>
-              </div>
-
-              <motion.div 
-                initial={{ opacity: 0 }} 
-                animate={{ opacity: 0.5 }} 
-                transition={{ delay: 1 }}
-                className="absolute bottom-6 left-0 w-full text-center pointer-events-none"
-              >
-                  <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-gray-400">JoI.A. Controller v2.1</p>
-              </motion.div>
-          </motion.div>
-        ) : (
-          <motion.div 
-            key="module"
-            variants={pageVariants}
-            initial="initial"
-            animate="animate"
-            exit="exit"
-            className="h-screen overflow-y-auto overflow-x-hidden flex flex-col bg-apple-bg"
-          >
-              {/* Floating Header Navigation */}
-              <div className="sticky top-0 z-40 px-6 py-4 flex justify-between items-center">
-                  {/* Glassmorphic Back Button */}
-                  <motion.button 
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => setCurrentView('hub')}
-                    className="flex items-center gap-3 bg-white/80 backdrop-blur-xl border border-white/60 shadow-apple px-4 py-2.5 rounded-full text-sm font-bold text-gray-800 hover:text-black hover:shadow-float transition-all"
-                  >
-                      <div className="w-6 h-6 rounded-full bg-black text-white flex items-center justify-center">
-                        <ArrowLeft size={14} strokeWidth={3} />
-                      </div>
-                      VOLTAR AO HUB
-                  </motion.button>
-                  
-                  <div className="hidden md:flex items-center gap-2 px-4 py-2 bg-white/50 backdrop-blur-md rounded-full border border-white/40">
-                       <span className="text-[10px] font-black text-gray-400 tracking-widest uppercase">JoI.A. SYSTEM</span>
-                  </div>
-              </div>
-
-              {/* Module Content */}
-              <main className="flex-1 w-full max-w-7xl mx-auto px-4 md:px-6 py-4 pb-20">
-                {currentView === 'dashboard' && <Dashboard />}
-                {currentView === 'meetings' && <MeetingCreator onBack={() => setCurrentView('hub')} />}
-                {currentView === 'ai-tools' && <AIToolsManager />}
-                {currentView === 'platforms' && <PlatformManager />}
-                {currentView === 'partnership' && (
-                    <PartnershipManager 
-                        cards={[]} 
-                        onAddCard={() => {}} 
-                        onDeleteCard={() => {}} 
-                    />
+            <p className="px-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 mt-6">Sistema</p>
+            
+            <button
+                onClick={() => setIsAlertsOpen(true)}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-50 hover:text-black transition-all"
+            >
+                <div className="relative">
+                  <Bell size={18} strokeWidth={2} />
+                  {activeAlerts.length > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
+                  )}
+                </div>
+                Alertas
+                {activeAlerts.length > 0 && (
+                    <span className="ml-auto bg-red-100 text-red-600 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                        {activeAlerts.length}
+                    </span>
                 )}
-                {currentView === 'wallet' && <WalletLogin />}
-              </main>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            </button>
+          </nav>
+        </div>
+
+        <div className="p-4 border-t border-gray-100">
+           <div className="bg-gray-50 rounded-xl p-4 flex items-center gap-3 border border-gray-100">
+              <div className="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 font-bold text-xs border border-white shadow-sm">
+                AD
+              </div>
+              <div className="overflow-hidden">
+                <p className="text-xs font-black text-black truncate">Admin User</p>
+                <p className="text-[10px] text-gray-400 font-medium truncate">Workspace Ativo</p>
+              </div>
+           </div>
+        </div>
+      </aside>
+
+      {/* MAIN CONTENT WRAPPER */}
+      <div className="flex-1 flex flex-col h-full overflow-hidden relative bg-[#F5F5F7]">
+        
+        {/* TOP HEADER */}
+        <header className="h-16 bg-white/80 backdrop-blur-xl border-b border-gray-200 flex items-center justify-between px-8 shrink-0 z-10 sticky top-0">
+          <div>
+            <h1 className="text-2xl font-black text-black tracking-tight">
+               {getPageTitle()}
+            </h1>
+          </div>
+
+          <div className="flex items-center gap-4">
+             <button 
+                onClick={() => setCurrentView('wallet')}
+                className={`flex items-center gap-2 px-5 py-2.5 rounded-full border transition-all text-xs font-bold uppercase tracking-wide ${
+                    currentView === 'wallet'
+                    ? 'bg-black text-white border-black shadow-lg transform scale-105'
+                    : 'bg-white text-black border-gray-200 hover:border-black hover:shadow-sm'
+                }`}
+             >
+                <Wallet size={16} strokeWidth={2.5} />
+                Minha Carteira
+             </button>
+          </div>
+        </header>
+
+        {/* CONTENT AREA */}
+        <main className="flex-1 overflow-y-auto overflow-x-hidden p-6 md:p-8 custom-scrollbar">
+          <div className="max-w-7xl mx-auto pb-10">
+             {renderContent()}
+          </div>
+        </main>
+      </div>
     </div>
   );
 }
