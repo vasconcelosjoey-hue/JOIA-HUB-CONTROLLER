@@ -1,47 +1,38 @@
+
 import React, { useEffect, useState } from 'react';
 import { X, AlertCircle, AlertTriangle, Bell, Calendar } from 'lucide-react';
 import { formatCurrency } from '../services/utils';
-
-export interface AlertItem {
-    id: string;
-    title: string;
-    message: string;
-    value: number;
-    level: 'red' | 'yellow';
-    source: string;
-}
+import { DashboardAlert } from '../types';
 
 interface NotificationCenterProps {
     isOpen: boolean;
     onClose: () => void;
-    alerts: AlertItem[];
+    alerts: DashboardAlert[];
 }
 
 export const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, onClose, alerts }) => {
-    const [visibleToasts, setVisibleToasts] = useState<AlertItem[]>([]);
+    const [visibleToasts, setVisibleToasts] = useState<DashboardAlert[]>([]);
 
-    // Ao montar ou receber novos alertas, mostra os toasts por um tempo limitado
+    // Show floating toasts when new alerts arrive (limit to top 2 urgency)
     useEffect(() => {
         if (alerts.length > 0) {
-            // Mostra apenas os 2 mais urgentes como toast para não poluir
             const urgentAlerts = alerts.slice(0, 2);
             setVisibleToasts(urgentAlerts);
 
-            // Auto-dismiss dos toasts após 5 segundos
+            // Auto-dismiss after 6 seconds
             const timer = setTimeout(() => {
                 setVisibleToasts([]);
             }, 6000);
 
             return () => clearTimeout(timer);
         }
-    }, [alerts.length]); // Re-run apenas se a quantidade mudar significativamente
+    }, [alerts.length]); // Trigger when count changes
 
     const removeToast = (id: string) => {
         setVisibleToasts(prev => prev.filter(t => t.id !== id));
     };
 
-    // --- RENDER TOASTS (Overlay Temporário) ---
-    // Aparece no topo, centralizado no mobile, direita no desktop
+    // --- TOAST RENDERER ---
     const renderToasts = () => (
         <div className="fixed top-4 left-0 w-full flex flex-col items-center pointer-events-none z-[100] px-4 gap-2 sm:items-end sm:right-4 sm:left-auto sm:w-auto">
             {visibleToasts.map((alert) => (
@@ -73,14 +64,9 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, 
         </div>
     );
 
-    // --- RENDER MODAL (Lista Completa) ---
-    // Aberto pelo botão de sino no Hub
+    // --- MODAL RENDERER ---
     const renderModal = () => {
         if (!isOpen) return null;
-
-        const redAlerts = alerts.filter(a => a.level === 'red');
-        const yellowAlerts = alerts.filter(a => a.level === 'yellow');
-        const sortedAlerts = [...redAlerts, ...yellowAlerts];
 
         return (
             <div className="fixed inset-0 z-[150] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
@@ -102,15 +88,15 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, 
                         </button>
                     </div>
 
-                    {/* Scrollable List */}
+                    {/* List */}
                     <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
-                        {sortedAlerts.length === 0 ? (
+                        {alerts.length === 0 ? (
                             <div className="flex flex-col items-center justify-center h-48 text-gray-300">
                                 <Bell size={48} strokeWidth={1} className="mb-2 opacity-20" />
                                 <p className="font-bold text-sm">Tudo tranquilo por aqui.</p>
                             </div>
                         ) : (
-                            sortedAlerts.map(alert => (
+                            alerts.map(alert => (
                                 <div 
                                     key={alert.id} 
                                     className={`relative p-4 rounded-2xl border-l-4 shadow-sm flex items-start gap-4 transition-transform active:scale-[0.98] ${

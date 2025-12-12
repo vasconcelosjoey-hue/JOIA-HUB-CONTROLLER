@@ -1,818 +1,161 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { useFirestoreDocument } from '../hooks/useFirestore';
-import { Plus, Trash2, TrendingUp, CreditCard, Target, Wallet, ArrowRight, Sparkles, TrendingDown, Layout, Edit3, X, GripVertical, AlertCircle, Copy, Check, Settings, Infinity, BarChart3, ChevronLeft, ChevronRight, Calendar, PieChart, ArrowUpRight, ArrowDownRight, LayoutGrid, Clipboard } from 'lucide-react';
-import { formatCurrency } from '../services/utils';
+import React, { useState, useMemo } from 'react';
+import { useFirestoreSubCollection } from '../hooks/useFirestore';
+import { Trash2, TrendingUp, Wallet, ArrowRight, Sparkles, TrendingDown, X, Infinity, BarChart3, ChevronLeft, ChevronRight, LayoutGrid, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { formatCurrency, getBrasiliaDate } from '../services/utils';
+import { WalletEntry } from '../types';
+import { parseWalletCommand, ParsedTransaction, ParsedPixKey } from '../services/walletParser';
 
-// --- Types ---
-interface FinanceItem {
-    id: string;
-    name: string;      
-    details: string;   
-    date: string;      
-    value: number;
-}
-
-interface AccountBox {
-    id: string;
-    name: string;
-    balance: number;
-}
-
-interface OutflowCategory {
-    id: string;
-    title: string;
-    items: FinanceItem[];
-}
-
-interface PixKey {
-    id: string;
-    title: string;
-    key: string;
-    type?: string;
-}
-
-// Inner Data Structure (The actual content)
-interface WalletData {
-    accounts: AccountBox[];
-    inflows: FinanceItem[];
-    outflowCategories: OutflowCategory[];
-    onRadar: FinanceItem[];
-    cardLimits: FinanceItem[];
-    pixKeys: PixKey[];
-}
-
-type WalletMode = 'CONTINUUM' | 'CONTROLLER';
-
-// Global State Structure
-interface DashboardState {
-    mode: WalletMode;
-    // Controller Mode State
-    currentYear: number;
-    currentMonth: number; // 0-11
-    
-    // Data Stores
-    continuum: WalletData;
-    controller: Record<string, WalletData>; // Key format: "YYYY-MM"
-}
-
-// --- Initial Mock Data - NOW FULLY CLEAN ---
-const EMPTY_WALLET_DATA: WalletData = {
-    accounts: [{ id: 'acc-1', name: 'Principal', balance: 0 }],
-    inflows: [],
-    outflowCategories: [], // Empty start
-    onRadar: [],
-    cardLimits: [],
-    pixKeys: []
-};
-
-const INITIAL_STATE: DashboardState = {
-    mode: 'CONTINUUM',
-    currentYear: new Date().getFullYear(),
-    currentMonth: new Date().getMonth(),
-    continuum: JSON.parse(JSON.stringify(EMPTY_WALLET_DATA)), // Deep copy
-    controller: {}
-};
-
-// --- Component Definition: DetailedSection ---
-interface DetailedSectionProps {
-    listId: string;
-    title: string;
-    icon: React.ReactNode;
-    items: FinanceItem[];
-    totalValue: number;
-    onAddItem: () => void;
-    onRemoveItem: (id: string) => void;
-    onUpdateItem: (id: string, field: keyof FinanceItem, value: any) => void;
-    onDuplicateItem?: (id: string) => void;
-    onDragStart?: (listId: string, index: number) => void;
-    onDragOver?: (e: React.DragEvent) => void;
-    onDrop?: (listId: string, index: number) => void;
-    theme: 'green' | 'red' | 'purple' | 'gray';
-    variant?: 'compact';
-    titleEditable?: boolean;
-    onTitleChange?: (newTitle: string) => void;
-    focusId?: string | null;
-    catId?: string;
-    customHeaderAction?: React.ReactNode;
-    showDate?: boolean;
-}
-
-const DetailedSection: React.FC<DetailedSectionProps> = ({
-    listId, title, icon, items, totalValue, onAddItem, onRemoveItem, onUpdateItem, onDuplicateItem,
-    onDragStart, onDragOver, onDrop, theme, variant, titleEditable, onTitleChange, focusId, customHeaderAction, showDate = false
-}) => {
-    // Theme colors
-    const themeColors: Record<string, string> = {
-        green: 'bg-emerald-50 border-emerald-100 text-emerald-600',
-        red: 'bg-red-50 border-red-100 text-red-600',
-        purple: 'bg-purple-50 border-purple-100 text-purple-600',
-        gray: 'bg-gray-50 border-gray-100 text-gray-600',
-    };
-
-    const activeTheme = themeColors[theme] || themeColors.gray;
-
-    return (
-        // Auto-growing container (no fixed height)
-        <div className={`bg-white rounded-2xl p-4 shadow-sm border border-gray-200 flex flex-col relative transition-all duration-300 ease-in-out`}>
-            {/* Header */}
-            <div className="flex justify-between items-center mb-3 pb-2 border-b border-gray-100">
-                <div className="flex items-center gap-2 flex-1 min-w-0">
-                    <div className={`p-1.5 rounded-lg shrink-0 ${activeTheme}`}>
-                        {icon}
-                    </div>
-                    {titleEditable ? (
-                        <input 
-                            type="text" 
-                            value={title} 
-                            onChange={(e) => onTitleChange?.(e.target.value)}
-                            className="font-black text-sm uppercase tracking-wide bg-transparent outline-none w-full min-w-0"
-                            placeholder="NOME DA SESSÃO"
-                        />
-                    ) : (
-                        <h3 className="font-black text-xs text-gray-500 uppercase tracking-widest truncate">{title}</h3>
-                    )}
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                    {customHeaderAction}
-                    <button onClick={onAddItem} className="bg-black text-white p-1 rounded-md hover:scale-110 transition-transform shadow-sm">
-                        <Plus size={12} />
-                    </button>
-                </div>
-            </div>
-
-            {/* List */}
-            <div className="flex-1 space-y-2">
-                {items.length === 0 ? (
-                    <div 
-                        className="flex flex-col items-center justify-center py-6 text-gray-300 border-2 border-dashed border-gray-50 rounded-xl transition-colors hover:border-gray-200 hover:bg-gray-50"
-                        onDragOver={onDragOver}
-                        onDrop={() => onDrop?.(listId, 0)}
-                    >
-                        <p className="text-[10px] font-bold uppercase">Lista Vazia</p>
-                    </div>
-                ) : (
-                    items.map((item, index) => (
-                        <div 
-                            key={item.id} 
-                            draggable={!!onDragStart}
-                            onDragStart={() => onDragStart?.(listId, index)}
-                            onDragOver={onDragOver}
-                            onDrop={() => onDrop?.(listId, index)}
-                            className={`group flex items-center gap-2 p-2 rounded-xl border border-transparent hover:border-gray-100 hover:bg-gray-50 transition-all relative animate-in slide-in-from-left-2 duration-300 ${focusId === item.id ? 'bg-yellow-50 border-yellow-200 ring-1 ring-yellow-100' : ''}`}
-                        >
-                            {onDragStart && (
-                                <div className="cursor-grab text-gray-300 hover:text-gray-500 hidden sm:block">
-                                    <GripVertical size={12} />
-                                </div>
-                            )}
-                            
-                            <div className="flex-1 min-w-0 grid grid-cols-12 gap-2 items-center">
-                                {/* Name & Details */}
-                                {/* IF showDate: Name 6 cols, Date 3 cols, Value 3 cols */}
-                                {/* IF !showDate: Name 8 cols, Value 4 cols */}
-                                <div className={showDate ? "col-span-6" : "col-span-8"}>
-                                    <input 
-                                        type="text" 
-                                        value={item.name} 
-                                        onChange={(e) => onUpdateItem(item.id, 'name', e.target.value)}
-                                        className="font-bold text-xs text-black bg-transparent outline-none w-full placeholder:text-gray-300"
-                                        placeholder="Nome..."
-                                        autoFocus={focusId === item.id}
-                                    />
-                                    <input 
-                                        type="text" 
-                                        value={item.details} 
-                                        onChange={(e) => onUpdateItem(item.id, 'details', e.target.value)}
-                                        className="text-[10px] font-medium text-gray-400 bg-transparent outline-none w-full placeholder:text-gray-200 block"
-                                        placeholder="Detalhes..."
-                                    />
-                                </div>
-
-                                {/* Date Input - Only shown in Controller Mode */}
-                                {showDate && (
-                                    <div className="col-span-3">
-                                        <input 
-                                            type="text" 
-                                            value={item.date} 
-                                            onChange={(e) => onUpdateItem(item.id, 'date', e.target.value)}
-                                            className="font-medium text-[10px] text-center text-gray-500 bg-gray-50/50 rounded-md py-1 outline-none w-full placeholder:text-gray-300"
-                                            placeholder="Data"
-                                        />
-                                    </div>
-                                )}
-
-                                {/* Value - No Spinners (Handled in CSS) */}
-                                <div className={showDate ? "col-span-3 flex items-center justify-end gap-1" : "col-span-4 flex items-center justify-end gap-1"}>
-                                    <span className="text-[10px] text-gray-400 font-bold">R$</span>
-                                    <input 
-                                        type="number" 
-                                        value={item.value === 0 ? '' : item.value} 
-                                        onChange={(e) => onUpdateItem(item.id, 'value', parseFloat(e.target.value) || 0)}
-                                        className="font-black text-sm text-right bg-transparent outline-none w-full placeholder:text-gray-200"
-                                        placeholder="0"
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Actions Group */}
-                            <div className="flex items-center opacity-30 group-hover:opacity-100 transition-opacity">
-                                {/* Duplicate Button */}
-                                <button
-                                    onClick={() => onDuplicateItem?.(item.id)}
-                                    className="p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
-                                    title="Duplicar item"
-                                    type="button"
-                                >
-                                    <Copy size={14} />
-                                </button>
-                                {/* Delete Item Button */}
-                                <button 
-                                    onClick={() => onRemoveItem(item.id)}
-                                    className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                                    type="button"
-                                    title="Excluir item"
-                                >
-                                    <Trash2 size={14} />
-                                </button>
-                            </div>
-                        </div>
-                    ))
-                )}
-            </div>
-
-            {/* Footer Total */}
-            <div className="mt-3 pt-2 border-t border-gray-100 flex justify-between items-end">
-                <span className="text-[10px] font-bold text-gray-400 uppercase">Total</span>
-                <span className="text-base font-black text-black">{formatCurrency(totalValue)}</span>
-            </div>
-        </div>
-    );
-};
-
-// --- Report Modal Component ---
-interface WalletReportsProps {
-    data: WalletData;
-    onClose: () => void;
-    monthName: string;
-}
-
-const WalletReports: React.FC<WalletReportsProps> = ({ data, onClose, monthName }) => {
-    // 1. Calculate Totals
-    const totalIn = data.inflows.reduce((acc, i) => acc + i.value, 0);
-    const totalOut = data.outflowCategories.reduce((acc, cat) => acc + cat.items.reduce((s, i) => s + i.value, 0), 0);
-    const balance = totalIn - totalOut;
-
-    // 2. Calculate Category Breakdown
-    const categoriesData = data.outflowCategories.map(cat => ({
-        id: cat.id,
-        title: cat.title,
-        value: cat.items.reduce((acc, i) => acc + i.value, 0)
-    })).filter(c => c.value > 0).sort((a, b) => b.value - a.value);
-
-    // Max value for progress bars
-    const maxCatValue = Math.max(...categoriesData.map(c => c.value), 1);
-
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-300">
-            <div className="bg-white rounded-[2rem] w-full max-w-lg shadow-2xl flex flex-col max-h-[90vh]">
-                
-                {/* Header */}
-                <div className="p-6 border-b border-gray-100 flex justify-between items-center">
-                    <div>
-                        <h3 className="text-xl font-black text-black flex items-center gap-2">
-                            <LayoutGrid size={20} className="text-black" /> Dashboards & Relatórios
-                        </h3>
-                        <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">{monthName}</p>
-                    </div>
-                    <button onClick={onClose} className="p-2 bg-gray-50 rounded-full hover:bg-gray-200 transition-colors">
-                        <X size={20} className="text-gray-600" />
-                    </button>
-                </div>
-
-                {/* Scrollable Content */}
-                <div className="overflow-y-auto p-6 space-y-8 custom-scrollbar">
-                    
-                    {/* 1. Balance Summary Cards */}
-                    <div>
-                        <h4 className="text-xs font-black text-gray-400 uppercase mb-3">Balanço Geral</h4>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="bg-emerald-50 rounded-2xl p-4 border border-emerald-100">
-                                <div className="flex items-center gap-2 mb-2 text-emerald-600">
-                                    <ArrowUpRight size={16} />
-                                    <span className="text-[10px] font-black uppercase">Entradas</span>
-                                </div>
-                                <p className="text-xl font-black text-emerald-700 truncate">{formatCurrency(totalIn)}</p>
-                            </div>
-                            <div className="bg-red-50 rounded-2xl p-4 border border-red-100">
-                                <div className="flex items-center gap-2 mb-2 text-red-600">
-                                    <ArrowDownRight size={16} />
-                                    <span className="text-[10px] font-black uppercase">Saídas</span>
-                                </div>
-                                <p className="text-xl font-black text-red-700 truncate">{formatCurrency(totalOut)}</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* 2. Visual Bar Comparison */}
-                    <div className="space-y-2">
-                        <div className="flex justify-between text-xs font-bold text-gray-500">
-                            <span>Proporção de Fluxo</span>
-                            <span>{balance >= 0 ? 'Resultado Positivo' : 'Alerta de Déficit'}</span>
-                        </div>
-                        <div className="h-6 bg-gray-100 rounded-full overflow-hidden flex shadow-inner">
-                            <div style={{ width: `${(totalIn / (totalIn + totalOut || 1)) * 100}%` }} className="bg-emerald-500 h-full transition-all duration-1000"></div>
-                            <div style={{ width: `${(totalOut / (totalIn + totalOut || 1)) * 100}%` }} className="bg-red-500 h-full transition-all duration-1000"></div>
-                        </div>
-                        <div className="flex justify-between text-[10px] font-bold uppercase text-gray-400">
-                            <span className="text-emerald-600">{((totalIn / (totalIn + totalOut || 1)) * 100).toFixed(0)}% Receita</span>
-                            <span className="text-red-600">{((totalOut / (totalIn + totalOut || 1)) * 100).toFixed(0)}% Despesa</span>
-                        </div>
-                    </div>
-
-                    {/* 3. Category Breakdown (Outras Sessões) */}
-                    <div>
-                        <h4 className="text-sm font-black text-black uppercase mb-4 flex items-center gap-2">
-                            <PieChart size={14} /> Performance por Sessão
-                        </h4>
-                        <div className="space-y-4">
-                            {categoriesData.length === 0 ? (
-                                <div className="text-center p-6 border-2 border-dashed border-gray-100 rounded-xl text-gray-400">
-                                    <p className="text-xs font-bold uppercase">Nenhum dado registrado</p>
-                                </div>
-                            ) : (
-                                categoriesData.map((cat, idx) => (
-                                    <div key={cat.id} className="space-y-1">
-                                        <div className="flex justify-between text-xs font-bold">
-                                            <span className="text-gray-700 flex items-center gap-2">
-                                                <span className="w-4 h-4 rounded-full bg-black text-white flex items-center justify-center text-[9px]">{idx + 1}</span>
-                                                {cat.title}
-                                            </span>
-                                            <span className="text-black">{formatCurrency(cat.value)}</span>
-                                        </div>
-                                        <div className="h-2 w-full bg-gray-50 rounded-full overflow-hidden">
-                                            <div 
-                                                className="h-full bg-black rounded-full transition-all duration-1000"
-                                                style={{ width: `${(cat.value / maxCatValue) * 100}%` }}
-                                            ></div>
-                                        </div>
-                                    </div>
-                                ))
-                            )}
-                        </div>
-                    </div>
-
-                </div>
-
-                {/* Footer */}
-                <div className="p-4 border-t border-gray-100 bg-gray-50 rounded-b-[2rem]">
-                    <div className="flex justify-between items-center">
-                        <span className="text-xs font-bold text-gray-400 uppercase">Resultado Líquido</span>
-                        <span className={`text-xl font-black ${balance >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                            {formatCurrency(balance)}
-                        </span>
-                    </div>
-                </div>
-
-            </div>
-        </div>
-    );
-};
-
-// Props for the main export
 interface WalletDashboardProps {
     walletId: string;
     walletName: string;
 }
 
+type WalletMode = 'CONTINUUM' | 'CONTROLLER';
+
 export const WalletDashboard: React.FC<WalletDashboardProps> = ({ walletId, walletName }) => {
-    // IMPORTANT: Replaced useLocalStorage with Firestore document synchronization
-    // We listen to the specific wallet document.
-    // The data is stored in a field called 'dashboardData'.
-    
-    // Structure expected in Firestore: wallets/{walletId} -> { ..., dashboardData: DashboardState }
-    
-    // Wrapper to match hook signature
-    const { data: walletDoc, setDocument } = useFirestoreDocument<{ dashboardData: DashboardState }>(
-        'wallets', 
-        walletId, 
-        { dashboardData: INITIAL_STATE }
-    );
-    
-    const state = walletDoc?.dashboardData || INITIAL_STATE;
-    
-    const setState = (newStateOrFn: DashboardState | ((prev: DashboardState) => DashboardState)) => {
-        let newState: DashboardState;
-        if (typeof newStateOrFn === 'function') {
-            newState = newStateOrFn(state);
-        } else {
-            newState = newStateOrFn;
-        }
-        // Save back to Firestore
-        setDocument({ dashboardData: newState });
-    };
+    // --- 1. DATA SOURCE (Event Sourcing) ---
+    // Reads directly from wallets/{id}/walletEntries
+    const { data: entries, addSubItem, deleteSubItem } = useFirestoreSubCollection<WalletEntry>('wallets', walletId, 'walletEntries');
 
+    // --- 2. LOCAL STATE ---
+    const [mode, setMode] = useState<WalletMode>('CONTINUUM');
+    const [currentDate, setCurrentDate] = useState(getBrasiliaDate());
     const [smartCommand, setSmartCommand] = useState('');
-    const [lastAction, setLastAction] = useState<string | null>(null);
+    const [lastAction, setLastAction] = useState<{ msg: string, type: 'success' | 'error' } | null>(null);
     const [showReports, setShowReports] = useState(false);
-    
-    // Auto-focus logic
-    const [focusId, setFocusId] = useState<string | null>(null);
 
-    // Drag & Drop State
-    const [draggedItem, setDraggedItem] = useState<{ listId: string, index: number } | null>(null);
-    const [copiedKeyId, setCopiedKeyId] = useState<string | null>(null);
+    // --- 3. CLIENT-SIDE CALCULATIONS ---
+    const filteredEntries = useMemo(() => {
+        if (mode === 'CONTINUUM') return entries;
 
-    // --- Helper: Get Active Data ---
-    const getControllerKey = (year: number, month: number) => `${year}-${month}`;
-    
-    const activeKey = getControllerKey(state.currentYear, state.currentMonth);
-
-    const data: WalletData = useMemo(() => {
-        // Robust safety checks for data integrity
-        const safeState = state || INITIAL_STATE;
-        const currentMode = safeState.mode || 'CONTINUUM';
-        
-        if (currentMode === 'CONTINUUM') {
-            return safeState.continuum || EMPTY_WALLET_DATA;
-        } else {
-            // Ensure controller structure exists
-            const ctrl = safeState.controller || {};
-            // Return existing month data or empty template
-            return ctrl[activeKey] || EMPTY_WALLET_DATA;
-        }
-    }, [state, activeKey]);
-
-    // --- Helper: Update Active Data ---
-    const updateActiveData = (newData: WalletData) => {
-        setState(prev => {
-            if (prev.mode === 'CONTINUUM') {
-                return { ...prev, continuum: newData };
-            } else {
-                const key = getControllerKey(prev.currentYear, prev.currentMonth);
-                return {
-                    ...prev,
-                    controller: {
-                        ...prev.controller,
-                        [key]: newData
-                    }
-                };
-            }
+        // Controller Mode: Filter by Month/Year
+        return entries.filter(e => {
+            const entryDate = new Date(e.date);
+            return entryDate.getMonth() === currentDate.getMonth() && 
+                   entryDate.getFullYear() === currentDate.getFullYear();
         });
-    };
+    }, [entries, mode, currentDate]);
 
-    // --- Calculations ---
-    const totalCash = data.accounts.reduce((acc, item) => acc + item.balance, 0);
-    const totalInflows = data.inflows.reduce((acc, item) => acc + item.value, 0);
-    
-    const totalOutflows = data.outflowCategories.reduce((acc, cat) => {
-        return acc + cat.items.reduce((iAcc, item) => iAcc + item.value, 0);
-    }, 0);
+    const inflows = useMemo(() => filteredEntries.filter(e => e.type === 'INFLOW'), [filteredEntries]);
+    const outflows = useMemo(() => filteredEntries.filter(e => e.type === 'OUTFLOW'), [filteredEntries]);
 
-    const projectedBalance = totalCash + totalInflows - totalOutflows;
-    const totalRadar = data.onRadar.reduce((acc, item) => acc + item.value, 0);
+    // Dynamic Categorization for Outflows
+    const outflowCategories = useMemo(() => {
+        const groups: Record<string, WalletEntry[]> = {};
+        outflows.forEach(item => {
+            const cat = item.category || 'Geral';
+            if (!groups[cat]) groups[cat] = [];
+            groups[cat].push(item);
+        });
+        return Object.entries(groups).map(([title, items]) => ({ title, items }));
+    }, [outflows]);
 
-    // --- Chart Data ---
-    const chartData = useMemo(() => {
-        const maxVal = Math.max(totalInflows, totalOutflows, 1);
-        return { in: totalInflows, out: totalOutflows, max: maxVal };
-    }, [totalInflows, totalOutflows]);
+    const totalIn = inflows.reduce((acc, curr) => acc + curr.amount, 0);
+    const totalOut = outflows.reduce((acc, curr) => acc + curr.amount, 0);
+    const balance = totalIn - totalOut;
 
-    // --- DRAG AND DROP HANDLERS (UNIVERSAL) ---
-    const handleDragStart = (listId: string, index: number) => {
-        setDraggedItem({ listId, index });
-    };
+    // --- 4. SMART COMMAND PARSER (Robust Version) ---
+    const handleSmartSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        
+        const result = parseWalletCommand(smartCommand);
 
-    const handleDragOver = (e: React.DragEvent) => {
-        e.preventDefault(); 
-    };
-
-    const handleDrop = (targetListId: string, targetIndex: number) => {
-        if (!draggedItem) return;
-        const { listId: sourceListId, index: sourceIndex } = draggedItem;
-
-        // Prevent dropping on self at same index (optional optimization)
-        if (sourceListId === targetListId && sourceIndex === targetIndex) return;
-
-        // Create Deep Copy
-        const newData = JSON.parse(JSON.stringify(data));
-
-        // Helper to get list reference by ID string
-        const getListArray = (lId: string, d: WalletData): FinanceItem[] | null => {
-            if (lId === 'inflows') return d.inflows;
-            if (lId === 'onRadar') return d.onRadar;
-            if (lId === 'cardLimits') return d.cardLimits;
-            if (lId.startsWith('cat:')) {
-                const catId = lId.split(':')[1];
-                const cat = d.outflowCategories.find(c => c.id === catId);
-                return cat ? cat.items : null;
-            }
-            return null;
-        };
-
-        const sourceList = getListArray(sourceListId, newData);
-        const targetList = getListArray(targetListId, newData);
-
-        if (sourceList && targetList) {
-            // 1. Remove from source
-            const [movedItem] = sourceList.splice(sourceIndex, 1);
-            
-            // 2. Insert into target
-            // Ensure targetIndex is within bounds (e.g., dropping at end of list)
-            const safeIndex = Math.min(targetIndex, targetList.length);
-            targetList.splice(safeIndex, 0, movedItem);
-
-            // 3. Save
-            updateActiveData(newData);
-        }
-
-        setDraggedItem(null);
-    };
-
-    // --- CRUD Actions (Wrapped) ---
-
-    // Accounts
-    const updateAccount = (id: string, field: keyof AccountBox, value: any) => {
-        const newData = { ...data, accounts: data.accounts.map(acc => acc.id === id ? { ...acc, [field]: value } : acc) };
-        updateActiveData(newData);
-    };
-    const addAccount = () => {
-        const newId = Date.now().toString();
-        const newData = { ...data, accounts: [...data.accounts, { id: newId, name: 'Nova Caixa', balance: 0 }] };
-        updateActiveData(newData);
-    };
-    const removeAccount = (id: string) => {
-        if (window.confirm('Tem certeza que deseja excluir esta caixa?')) {
-            const newData = { ...data, accounts: data.accounts.filter(a => a.id !== id) };
-            updateActiveData(newData);
-        }
-    };
-
-    // Generic Items
-    const updateItem = (listKey: 'inflows' | 'onRadar' | 'cardLimits', id: string, field: keyof FinanceItem, value: any) => {
-        const newData = { ...data, [listKey]: data[listKey].map(item => item.id === id ? { ...item, [field]: value } : item) };
-        updateActiveData(newData);
-    };
-    const addItem = (listKey: 'inflows' | 'onRadar' | 'cardLimits', initialData?: Partial<FinanceItem>) => {
-        const newId = Date.now().toString();
-        const newItem: FinanceItem = { 
-            id: newId, 
-            name: initialData?.name || '', 
-            details: initialData?.details || '', 
-            date: initialData?.date || '', 
-            value: initialData?.value || 0 
-        };
-        const newData = { ...data, [listKey]: [...data[listKey], newItem] };
-        updateActiveData(newData);
-        setFocusId(newId);
-    };
-    const removeItem = (listKey: 'inflows' | 'onRadar' | 'cardLimits', id: string) => {
-        // Direct update to ensure re-render
-        const newData = { ...data, [listKey]: data[listKey].filter(item => item.id !== id) };
-        updateActiveData(newData);
-    };
-
-    // DUPLICATION LOGIC
-    const handleDuplicate = (listKey: 'inflows' | 'onRadar' | 'cardLimits' | 'cat' | 'pixKeys', itemId: string, catId?: string) => {
-        let newData = JSON.parse(JSON.stringify(data)); // Deep copy for safety
-        const newId = Date.now().toString() + Math.random().toString().slice(2,5);
-
-        if (listKey === 'pixKeys') {
-            const list = newData.pixKeys;
-            const originalItem = list.find((i: PixKey) => i.id === itemId);
-            if (originalItem) {
-                 const newItem = {
-                     ...originalItem,
-                     id: newId,
-                     title: `${originalItem.title} (Cópia)`
-                 };
-                 newData.pixKeys = [...list, newItem];
-                 updateActiveData(newData);
-            }
+        if (result.type === 'UNKNOWN' || result.error) {
+            setLastAction({ msg: result.error || 'Erro desconhecido', type: 'error' });
+            setTimeout(() => setLastAction(null), 3000);
             return;
         }
 
-        if (listKey === 'cat' && catId) {
-             const category = newData.outflowCategories.find((c: OutflowCategory) => c.id === catId);
-             if (category) {
-                 const originalItem = category.items.find((i: FinanceItem) => i.id === itemId);
-                 if (originalItem) {
-                     const newItem = { ...originalItem, id: newId, name: `${originalItem.name} (Cópia)` };
-                     const updatedCats = newData.outflowCategories.map((c: OutflowCategory) => 
-                        c.id === catId ? { ...c, items: [...c.items, newItem] } : c
-                     );
-                     newData.outflowCategories = updatedCats;
-                     updateActiveData(newData);
-                     setFocusId(newId);
-                 }
-             }
-        } else if (listKey !== 'cat') {
-             // @ts-ignore
-             const list = newData[listKey] as FinanceItem[];
-             const originalItem = list.find(i => i.id === itemId);
-             if (originalItem) {
-                 const newItem = { ...originalItem, id: newId, name: `${originalItem.name} (Cópia)` };
-                 // @ts-ignore
-                 newData[listKey] = [...list, newItem];
-                 updateActiveData(newData);
-                 setFocusId(newId);
-             }
-        }
-    };
-
-    // Outflow Categories & Items
-    const addOutflowCategory = (title: string = 'Nova Sessão') => {
-        const newId = Date.now().toString();
-        const newData = { ...data, outflowCategories: [...data.outflowCategories, { id: newId, title, items: [] }] };
-        updateActiveData(newData);
-        setFocusId(newId);
-    };
-    const removeOutflowCategory = (catId: string) => {
-        if (window.confirm('ATENÇÃO: Deseja excluir esta sessão inteira e todos os itens dentro dela?')) {
-            const newData = { ...data, outflowCategories: data.outflowCategories.filter(c => c.id !== catId) };
-            updateActiveData(newData);
-        }
-    };
-    const updateCategoryTitle = (catId: string, newTitle: string) => {
-        const newData = { ...data, outflowCategories: data.outflowCategories.map(c => c.id === catId ? { ...c, title: newTitle } : c) };
-        updateActiveData(newData);
-    };
-    const addOutflowItem = (catId: string, initialData?: Partial<FinanceItem>) => {
-        const newId = Date.now().toString() + Math.random().toString().slice(2,5);
-        const newItem: FinanceItem = { 
-            id: newId, 
-            name: initialData?.name || '', 
-            details: initialData?.details || '', 
-            date: initialData?.date || '', 
-            value: initialData?.value || 0 
-        };
-        const newData = {
-            ...data,
-            outflowCategories: data.outflowCategories.map(c => c.id === catId ? { ...c, items: [...c.items, newItem] } : c)
-        };
-        updateActiveData(newData);
-        setFocusId(newId);
-    };
-    const updateOutflowItem = (catId: string, itemId: string, field: keyof FinanceItem, value: any) => {
-        const newData = {
-            ...data,
-            outflowCategories: data.outflowCategories.map(c => c.id === catId ? { ...c, items: c.items.map(i => i.id === itemId ? { ...i, [field]: value } : i) } : c)
-        };
-        updateActiveData(newData);
-    };
-    const removeOutflowItem = (catId: string, itemId: string) => {
-        const newData = {
-            ...data,
-            outflowCategories: data.outflowCategories.map(c => c.id === catId ? { ...c, items: c.items.filter(i => i.id !== itemId) } : c)
-        };
-        updateActiveData(newData);
-    };
-
-    // Pix Keys
-    const addPixKey = (initial?: { title: string, key: string, type?: string }) => {
-        const newData = { 
-            ...data, 
-            pixKeys: [...(data.pixKeys || []), { 
-                id: Date.now().toString() + Math.random(), 
-                title: initial?.title || '', 
-                key: initial?.key || '',
-                type: initial?.type || ''
-            }] 
-        };
-        updateActiveData(newData);
-    };
-    const updatePixKey = (id: string, field: keyof PixKey, value: string) => {
-        const newData = { ...data, pixKeys: data.pixKeys.map(k => k.id === id ? { ...k, [field]: value } : k) };
-        updateActiveData(newData);
-    };
-    const removePixKey = (id: string) => {
-        const newData = { ...data, pixKeys: data.pixKeys.filter(k => k.id !== id) };
-        updateActiveData(newData);
-    };
-    const copyPix = (key: string, id: string) => {
-        navigator.clipboard.writeText(key);
-        setCopiedKeyId(id);
-        setTimeout(() => setCopiedKeyId(null), 2000);
-    };
-
-    // --- SMART COMMAND PARSER 2.0 (Intelligent) ---
-    const handleSmartSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        const cmd = smartCommand.trim();
-        if (!cmd) return;
-
-        // Parse Helper
-        const extractValue = (str: string) => {
-            const matches = str.match(/(\d+[.,]?\d*)/);
-            if (matches) return parseFloat(matches[0].replace(',', '.'));
-            return 0;
-        };
-        const removeValue = (str: string) => str.replace(/(\d+[.,]?\d*)/, '').trim();
-
-        const lowerCmd = cmd.toLowerCase();
-        let actionTaken = '';
-
-        // 1. CHAVES PIX
-        if (lowerCmd.startsWith('pix') || lowerCmd.startsWith('chave')) {
-            const clean = cmd.replace(/^(pix|chave|chave pix)\s*/i, '');
-            // Tenta separar Nome e Chave
-            const parts = clean.split(' ');
-            const key = parts.pop() || ''; // Assume a ultima parte é a chave
-            const name = parts.join(' ') || 'Nova Chave';
-            
-            addPixKey({ title: name, key: key, type: 'Smart' });
-            actionTaken = 'Chave Pix salva!';
-        }
-        // 2. LIMITES
-        else if (lowerCmd.startsWith('limite')) {
-            const clean = cmd.replace(/^limite\s*/i, '');
-            const val = extractValue(clean);
-            const name = removeValue(clean) || 'Cartão';
-            
-            addItem('cardLimits', { name, value: val, date: 'MENSAL' });
-            actionTaken = 'Limite adicionado!';
-        }
-        // 3. CAIXAS (Accounts)
-        else if (lowerCmd.startsWith('caixa') || lowerCmd.startsWith('minha caixa')) {
-            const clean = cmd.replace(/^(caixa|minha caixa)\s*/i, '');
-            const val = extractValue(clean);
-            const name = removeValue(clean) || 'Nova Caixa';
-
-            const newData = { ...data, accounts: [...data.accounts, { id: Date.now().toString(), name, balance: val }] };
-            updateActiveData(newData);
-            actionTaken = 'Nova Caixa criada!';
-        }
-        // 4. NO RADAR
-        else if (lowerCmd.startsWith('radar') || lowerCmd.startsWith('no radar')) {
-            const clean = cmd.replace(/^(radar|no radar)\s*/i, '');
-            const val = extractValue(clean);
-            const name = removeValue(clean) || 'Item';
-            
-            addItem('onRadar', { name, value: val, date: 'FUTURO' });
-            actionTaken = 'Item adicionado ao Radar!';
-        }
-        // 5. ENTRADAS
-        else if (lowerCmd.startsWith('entrada')) {
-            const clean = cmd.replace(/^entrada\s*/i, '');
-            const val = extractValue(clean);
-            // Check for date pattern simple (dd mmm) at end
-            const name = removeValue(clean);
-            
-            addItem('inflows', { name: name || 'Nova Entrada', value: val, date: 'HOJE' });
-            actionTaken = 'Entrada registrada!';
-        }
-        // 6. SAÍDAS / DESPESAS
-        else if (lowerCmd.startsWith('saida') || lowerCmd.startsWith('despesa')) {
-            const clean = cmd.replace(/^(saida|despesa)\s*/i, '');
-            const val = extractValue(clean);
-            const name = removeValue(clean);
-
-            // Logic Fix: Handle empty category scenario
-            let catId = data.outflowCategories[0]?.id;
-            
-            if (!catId) {
-                // Create a new category AND the item in one atomic update
-                const newCatId = Date.now().toString();
-                const newItem: FinanceItem = { 
-                    id: Date.now().toString() + '1', 
-                    name: name || 'Nova Despesa', 
-                    details: 'SmartBox', 
-                    date: 'HOJE', 
-                    value: val 
-                };
+        try {
+            if (result.type === 'TRANSACTION' && result.data) {
+                const tx = result.data as ParsedTransaction;
                 
-                const newCat = { id: newCatId, title: 'Geral', items: [newItem] };
-                const newData = { ...data, outflowCategories: [newCat] }; // Replace or append
-                updateActiveData(newData);
-            } else {
-                addOutflowItem(catId, { name: name || 'Nova Despesa', value: val, date: 'HOJE' });
+                const newEntry: Omit<WalletEntry, 'id' | 'ownerId' | 'createdAt'> = {
+                    walletId,
+                    type: tx.intent,
+                    amount: tx.amount,
+                    description: tx.description,
+                    category: tx.category,
+                    status: 'COMPLETED',
+                    date: tx.date
+                };
+
+                await addSubItem(newEntry);
+                setLastAction({ msg: `${tx.intent === 'INFLOW' ? 'Entrada' : 'Saída'} de ${formatCurrency(tx.amount)} registrada!`, type: 'success' });
+            } 
+            else if (result.type === 'PIX_KEY' && result.data) {
+                 const keyData = result.data as ParsedPixKey;
+                 // Store Pix Key as a reference entry
+                 const pixEntry: Omit<WalletEntry, 'id' | 'ownerId' | 'createdAt'> = {
+                    walletId,
+                    type: 'OUTFLOW', // Using Outflow type but 0 amount for info storage
+                    amount: 0,
+                    description: `Chave Pix Salva: ${keyData.name}`,
+                    category: 'Chaves Pix',
+                    status: 'COMPLETED',
+                    date: getBrasiliaDate().toISOString(),
+                    tags: ['PIX_KEY', keyData.key]
+                };
+
+                await addSubItem(pixEntry);
+                setLastAction({ msg: `Chave Pix de ${keyData.name} salva!`, type: 'success' });
             }
-            actionTaken = 'Despesa lançada!';
-        }
-        // FALLBACK (Default behavior / Text Note)
-        else {
-             actionTaken = 'Comando não reconhecido. Tente: Pix, Entrada, Saida...';
+
+            setSmartCommand('');
+        } catch (err) {
+            console.error(err);
+            setLastAction({ msg: 'Erro ao salvar no banco de dados.', type: 'error' });
         }
 
-        setLastAction(actionTaken);
-        setSmartCommand('');
-        setTimeout(() => setLastAction(null), 3000);
+        setTimeout(() => setLastAction(null), 4000);
     };
 
-    // --- NAVIGATION LOGIC ---
-    const months = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
-    
-    const changeMonth = (monthIndex: number) => {
-        setState(prev => ({ ...prev, currentMonth: monthIndex }));
+    // --- 5. UI HELPERS ---
+    const handleMonthChange = (direction: number) => {
+        const newDate = new Date(currentDate);
+        newDate.setMonth(currentDate.getMonth() + direction);
+        setCurrentDate(newDate);
     };
-    
-    const changeYear = (delta: number) => {
-        setState(prev => ({ ...prev, currentYear: prev.currentYear + delta }));
-    };
+
+    // --- UI RENDER ---
+    const renderList = (items: WalletEntry[], emptyMsg: string, isOutflow = false) => (
+        <div className="space-y-2">
+            {items.length === 0 ? (
+                <div className="border-2 border-dashed border-gray-100 rounded-xl p-4 text-center text-gray-400 text-xs font-bold uppercase">
+                    {emptyMsg}
+                </div>
+            ) : (
+                items.map(item => (
+                    <div key={item.id} className="group flex items-center justify-between p-3 bg-white rounded-xl border border-transparent hover:border-gray-200 hover:shadow-sm transition-all animate-in slide-in-from-left-2">
+                        <div className="min-w-0 flex-1">
+                            <p className="font-bold text-sm text-gray-800 truncate">{item.description}</p>
+                            <p className="text-[10px] text-gray-400 font-medium">
+                                {new Date(item.date).toLocaleDateString('pt-BR')} • {item.category}
+                                {item.tags?.includes('PIX_KEY') && <span className="ml-2 bg-blue-100 text-blue-700 px-1 rounded">Chave: {item.tags[1]}</span>}
+                            </p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <span className={`font-black text-sm ${item.amount === 0 ? 'text-gray-400' : (isOutflow ? 'text-red-500' : 'text-emerald-600')}`}>
+                                {item.amount > 0 ? (isOutflow ? '-' : '+') : ''}{formatCurrency(item.amount)}
+                            </span>
+                            <button 
+                                onClick={() => deleteSubItem(item.id)}
+                                className="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-500 transition-all"
+                            >
+                                <Trash2 size={14} />
+                            </button>
+                        </div>
+                    </div>
+                ))
+            )}
+        </div>
+    );
 
     return (
         <div className="max-w-7xl mx-auto space-y-4 pb-24 font-sans px-2 sm:px-0">
-            {/* Display Wallet Name in Header */}
-            <div className="bg-black/90 backdrop-blur text-white px-4 py-3 rounded-2xl flex items-center justify-between shadow-lg mb-2">
+             
+             {/* Header */}
+             <div className="bg-black/90 backdrop-blur text-white px-4 py-3 rounded-2xl flex items-center justify-between shadow-lg mb-2">
                 <div className="flex items-center gap-2">
                     <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
                         <Wallet size={16} />
@@ -824,84 +167,46 @@ export const WalletDashboard: React.FC<WalletDashboardProps> = ({ walletId, wall
                 </div>
                 <div className="text-right">
                     <span className="text-[10px] font-bold text-emerald-400 uppercase flex items-center gap-1 justify-end">
-                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></div> Online
+                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></div> Synced
                     </span>
                 </div>
             </div>
-            
-            {showReports && (
-                <WalletReports 
-                    data={data} 
-                    onClose={() => setShowReports(false)} 
-                    monthName={state.mode === 'CONTROLLER' ? `${months[state.currentMonth]} ${state.currentYear}` : 'Continuum'} 
-                />
-            )}
 
-            {/* HEADER CONFIG MODES */}
+            {/* Config & Modes */}
             <div className="flex flex-col gap-2 px-2 py-3 mb-2 bg-white rounded-2xl border border-gray-100 shadow-sm">
-                <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-black text-gray-300 uppercase tracking-[0.2em] ml-1">SYSTEM ARCHITECTURE</span>
-                    <button className="p-1.5 text-gray-300 hover:text-black transition-colors rounded-full hover:bg-gray-100"><Settings size={14} /></button>
+                 <div className="flex justify-between items-center px-1">
+                    <span className="text-[10px] font-black text-gray-300 uppercase tracking-[0.2em]">VIEW MODE</span>
+                    <button onClick={() => setShowReports(!showReports)} className={`p-2 rounded-lg transition-colors ${showReports ? 'bg-black text-white' : 'text-gray-400 hover:bg-gray-100'}`}>
+                        <LayoutGrid size={16} />
+                    </button>
                 </div>
-                
                 <div className="flex bg-gray-100/50 p-1 rounded-xl gap-1">
                     <button 
-                        onClick={() => setState(prev => ({ ...prev, mode: 'CONTINUUM' }))}
-                        className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${state.mode === 'CONTINUUM' ? 'bg-white text-black shadow-apple scale-[1.02]' : 'text-gray-400 hover:text-gray-600'}`}
+                        onClick={() => setMode('CONTINUUM')}
+                        className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${mode === 'CONTINUUM' ? 'bg-white text-black shadow-apple scale-[1.02]' : 'text-gray-400 hover:text-gray-600'}`}
                     >
-                        <Infinity size={14} strokeWidth={state.mode === 'CONTINUUM' ? 3 : 2} /> Continuum
+                        <Infinity size={14} strokeWidth={mode === 'CONTINUUM' ? 3 : 2} /> Continuum
                     </button>
                     <button 
-                        onClick={() => setState(prev => ({ ...prev, mode: 'CONTROLLER' }))}
-                        className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${state.mode === 'CONTROLLER' ? 'bg-white text-black shadow-apple scale-[1.02]' : 'text-gray-400 hover:text-gray-600'}`}
+                        onClick={() => setMode('CONTROLLER')}
+                        className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${mode === 'CONTROLLER' ? 'bg-white text-black shadow-apple scale-[1.02]' : 'text-gray-400 hover:text-gray-600'}`}
                     >
-                        <BarChart3 size={14} strokeWidth={state.mode === 'CONTROLLER' ? 3 : 2} /> Controller
+                        <BarChart3 size={14} strokeWidth={mode === 'CONTROLLER' ? 3 : 2} /> Controller
                     </button>
                 </div>
-
-                {/* CONTROLLER MONTH SELECTOR & REPORTS BUTTON */}
-                {state.mode === 'CONTROLLER' && (
-                    <div className="animate-in slide-in-from-top-2 pt-2 border-t border-gray-100 mt-1 flex flex-col gap-2">
-                        {/* Month Nav */}
-                        <div className="flex items-center justify-between px-1">
-                            <div className="flex items-center gap-2">
-                                <button onClick={() => changeYear(-1)} className="p-1 hover:bg-gray-200 rounded-md"><ChevronLeft size={14}/></button>
-                                <span className="text-sm font-black text-black tracking-widest">{state.currentYear}</span>
-                                <button onClick={() => changeYear(1)} className="p-1 hover:bg-gray-200 rounded-md"><ChevronRight size={14}/></button>
-                            </div>
-                            
-                            {/* NEW: DASHBOARD REPORT BUTTON */}
-                            <button 
-                                onClick={() => setShowReports(true)}
-                                className="bg-black text-white px-4 py-2 rounded-xl flex items-center gap-2 text-xs font-black uppercase hover:bg-gray-800 transition-all shadow-lg active:scale-95"
-                            >
-                                <LayoutGrid size={14} /> Dashboards
-                            </button>
-                        </div>
-                        
-                        {/* Month List */}
-                        <div className="flex justify-between items-center gap-1 overflow-x-auto pb-1 custom-scrollbar">
-                            {months.map((m, idx) => (
-                                <button
-                                    key={m}
-                                    onClick={() => changeMonth(idx)}
-                                    className={`min-w-[40px] py-1.5 rounded-lg text-[10px] font-bold transition-all ${
-                                        state.currentMonth === idx 
-                                        ? 'bg-black text-white shadow-md' 
-                                        : 'bg-transparent text-gray-400 hover:bg-gray-100'
-                                    }`}
-                                >
-                                    {m}
-                                </button>
-                            ))}
-                        </div>
+                
+                {mode === 'CONTROLLER' && (
+                    <div className="flex items-center justify-center gap-4 py-2 border-t border-gray-100 mt-1 animate-in slide-in-from-top-2">
+                        <button onClick={() => handleMonthChange(-1)} className="p-1 hover:bg-gray-100 rounded-full"><ChevronLeft size={16}/></button>
+                        <span className="text-sm font-black text-black uppercase">{currentDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}</span>
+                        <button onClick={() => handleMonthChange(1)} className="p-1 hover:bg-gray-100 rounded-full"><ChevronRight size={16}/></button>
                     </div>
                 )}
             </div>
 
-            {/* 0) SMART COMMAND BAR */}
-            <div className="sticky top-0 z-30 pt-2 pb-1 bg-apple-bg/95 backdrop-blur-md">
-                <div className={`relative p-[2px] rounded-2xl shadow-sm transition-all duration-500 ${state.mode === 'CONTINUUM' ? 'bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500' : 'bg-gradient-to-r from-blue-600 via-cyan-500 to-teal-400'}`}>
+            {/* SMART COMMAND BAR */}
+             <div className="sticky top-0 z-30 pt-2 pb-1 bg-apple-bg/95 backdrop-blur-md">
+                <div className={`relative p-[2px] rounded-2xl shadow-sm transition-all duration-500 bg-gradient-to-r from-blue-600 via-purple-500 to-pink-500`}>
                     <form onSubmit={handleSmartSubmit} className="relative bg-transparent rounded-xl overflow-hidden flex items-center">
                         <Sparkles className="absolute left-3 top-3 text-white animate-pulse z-10" size={16} />
                         <textarea 
@@ -913,294 +218,120 @@ export const WalletDashboard: React.FC<WalletDashboardProps> = ({ walletId, wall
                                     handleSmartSubmit(e);
                                 }
                             }}
-                            placeholder="Comandos: 'Pix [nome] [chave]', 'Entrada [nome] [valor]', 'Saida [nome] [valor]'..."
-                            className="w-full pl-10 pr-10 py-2.5 font-bold italic text-sm text-white placeholder:text-white/70 placeholder:font-normal placeholder:not-italic outline-none resize-none h-[42px] focus:h-[120px] transition-all duration-300 custom-scrollbar pt-2.5 bg-transparent relative z-0"
+                            placeholder="Ex: 'Entrada 500 Freelance', 'Gasto 80 Jantar em Lazer', 'Pix Joey 1234'..."
+                            className="w-full pl-10 pr-10 py-2.5 font-bold italic text-sm text-white placeholder:text-white/70 placeholder:font-normal placeholder:not-italic outline-none resize-none h-[42px] focus:h-[80px] transition-all duration-300 custom-scrollbar pt-2.5 bg-transparent relative z-0"
                         />
-                        <div className="absolute inset-0 bg-black/10 -z-10 pointer-events-none"></div>
                         <button type="submit" className="absolute right-2 top-2 bg-white text-black p-1.5 rounded-lg hover:scale-105 transition-transform z-10">
                             <ArrowRight size={14} />
                         </button>
                     </form>
                     {lastAction && (
-                        <div className="absolute -bottom-8 left-0 w-full text-center">
-                            <span className="bg-black text-white text-[10px] font-bold px-3 py-1 rounded-full shadow-md animate-in slide-in-from-top-2 fade-in">{lastAction}</span>
+                        <div className="absolute -bottom-10 left-0 w-full text-center">
+                            <span className={`text-[10px] font-bold px-4 py-2 rounded-full shadow-float animate-in slide-in-from-top-2 fade-in ${lastAction.type === 'error' ? 'bg-red-500 text-white' : 'bg-black text-white'}`}>
+                                {lastAction.msg}
+                            </span>
                         </div>
                     )}
                 </div>
             </div>
 
-            {/* 1) HEADER & ACCOUNTS (CAIXAS) */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                
-                {/* CAIXAS - COMPACT */}
-                <div className="lg:col-span-2 bg-white rounded-2xl p-4 shadow-sm border border-gray-200 flex flex-col">
-                    <div className="flex justify-between items-center mb-2">
-                        <h3 className="font-black text-xs text-gray-500 uppercase tracking-widest flex items-center gap-2">
-                            <Wallet size={14} /> Minhas Caixas
-                        </h3>
-                        <button onClick={addAccount} className="bg-black text-white p-1 rounded-md hover:scale-110 transition-transform">
-                            <Plus size={12} />
-                        </button>
-                    </div>
-                    
-                    <div className="flex gap-3 overflow-x-auto pb-2 custom-scrollbar snap-x">
-                        {data.accounts.map(acc => (
-                            <div key={acc.id} className="snap-start min-w-[150px] bg-gray-50 rounded-xl p-3 border border-gray-100 flex flex-col justify-between group relative hover:border-gray-300 transition-colors">
-                                <button 
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        removeAccount(acc.id);
-                                    }} 
-                                    className="absolute top-1 right-1 text-gray-300 hover:text-red-500 transition-colors"
-                                    type="button"
-                                >
-                                    <X size={14} />
-                                </button>
-                                <input 
-                                    type="text" 
-                                    value={acc.name} 
-                                    onChange={(e) => updateAccount(acc.id, 'name', e.target.value)} 
-                                    className="bg-transparent font-black text-xs text-black outline-none w-full mb-1 placeholder:text-gray-300"
-                                    placeholder="Nome"
-                                />
-                                <div className="flex items-center gap-1">
-                                    <span className="text-[10px] font-bold text-gray-400">R$</span>
-                                    <input 
-                                        type="number" 
-                                        value={acc.balance === 0 ? '' : acc.balance} 
-                                        onChange={(e) => updateAccount(acc.id, 'balance', parseFloat(e.target.value) || 0)} 
-                                        className="bg-transparent font-black text-base text-black outline-none w-full placeholder:text-gray-200"
-                                        placeholder="0,00"
-                                    />
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                    
-                    <div className="mt-2 pt-2 border-t border-gray-100 flex justify-between items-end">
-                        <p className="text-[10px] font-bold text-gray-400 uppercase">Total Disp.</p>
-                        <p className="text-xl font-black text-black tracking-tight">{formatCurrency(totalCash)}</p>
-                    </div>
-                </div>
-
-                {/* CHART / SUMMARY - COMPACT */}
-                <div className="bg-white rounded-2xl p-4 shadow-float border border-gray-100 flex flex-col justify-between relative overflow-hidden">
-                    <div className="relative z-10">
-                        <p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest mb-0.5">Saldo Projetado</p>
-                        <p className={`text-2xl font-black tracking-tighter ${projectedBalance < 0 ? 'text-red-500' : 'text-emerald-500'}`}>
-                            {formatCurrency(projectedBalance)}
-                        </p>
-                        <p className="text-[9px] text-gray-400 mt-1 font-medium">Caixa + Entradas - Saídas</p>
-                    </div>
-
-                    <div className="relative z-10 mt-2 flex gap-3 items-end">
-                         {/* Visual Chart */}
-                        <div className="flex gap-1 h-12 items-end flex-1">
-                            <div style={{ height: `${(chartData.in / chartData.max) * 100}%` }} className="bg-emerald-100 border border-emerald-200 rounded-t-sm w-full"></div>
-                            <div style={{ height: `${(chartData.out / chartData.max) * 100}%` }} className="bg-red-100 border border-red-200 rounded-t-sm w-full"></div>
+            {/* BALANCE CARD */}
+            <div className="flex justify-center my-6">
+                 <div className="bg-white px-8 py-6 rounded-3xl border border-gray-100 flex flex-col items-center justify-center shadow-float min-w-[240px] relative overflow-hidden transition-all duration-500">
+                    <span className="text-[10px] font-bold uppercase text-gray-400 mb-1 flex items-center gap-1">SALDO {mode === 'CONTROLLER' ? 'DO MÊS' : 'TOTAL'}</span>
+                    <span className={`text-4xl font-black ${balance < 0 ? 'text-red-500' : 'text-black'}`}>{formatCurrency(balance)}</span>
+                    <div className="flex gap-4 mt-2 w-full justify-center">
+                        <div className="text-center">
+                            <p className="text-[9px] font-bold text-emerald-500 uppercase flex items-center justify-center gap-1"><ArrowUpRight size={10}/> Entradas</p>
+                            <p className="text-sm font-bold text-emerald-600">{formatCurrency(totalIn)}</p>
                         </div>
-                        {/* Numeric Outflow Summary */}
-                        <div className="flex flex-col items-end justify-end pb-0">
-                            <span className="text-[8px] font-bold text-red-400 uppercase">Total Saídas</span>
-                            <span className="text-sm font-black text-red-600 leading-tight">{formatCurrency(totalOutflows)}</span>
+                        <div className="w-px bg-gray-100 h-8"></div>
+                        <div className="text-center">
+                            <p className="text-[9px] font-bold text-red-400 uppercase flex items-center justify-center gap-1"><ArrowDownRight size={10}/> Saídas</p>
+                            <p className="text-sm font-bold text-red-500">{formatCurrency(totalOut)}</p>
                         </div>
                     </div>
-                </div>
-            </div>
-
-            {/* FINANCIAL SUMMARY BAR - CENTERED SALDO ONLY */}
-            <div className="flex justify-center">
-                 <div className="bg-black text-white px-8 py-4 rounded-2xl border border-gray-800 flex flex-col items-center justify-center shadow-float min-w-[200px] relative overflow-hidden transition-all duration-500">
-                    <div className={`absolute top-0 left-0 w-full h-1 bg-gradient-to-r ${state.mode === 'CONTINUUM' ? 'from-purple-500 to-orange-500' : 'from-blue-500 to-teal-500'}`}></div>
-                    <span className="text-[10px] font-bold uppercase opacity-70 mb-1 flex items-center gap-1"><TrendingUp size={12}/> SALDO FINAL {state.mode === 'CONTROLLER' && `(${months[state.currentMonth]})`}</span>
-                    <span className={`text-3xl font-black ${projectedBalance < 0 ? 'text-red-400' : 'text-white'}`}>{formatCurrency(projectedBalance)}</span>
                  </div>
             </div>
 
-            {/* --- MAIN CONTENT GRID: SIDE BY SIDE --- */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+            {/* COLUMNS */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
                 
-                {/* LEFT COL: ENTRADAS */}
-                <div>
-                    <DetailedSection 
-                        listId="inflows"
-                        title="Entradas Previstas"
-                        icon={<TrendingUp size={16} className="text-emerald-500" />}
-                        items={data.inflows}
-                        totalValue={totalInflows}
-                        onAddItem={() => addItem('inflows')}
-                        onRemoveItem={(id) => removeItem('inflows', id)}
-                        onUpdateItem={(id, field, val) => updateItem('inflows', id, field, val)}
-                        onDuplicateItem={(id) => handleDuplicate('inflows', id)}
-                        onDragStart={handleDragStart}
-                        onDragOver={handleDragOver}
-                        onDrop={handleDrop}
-                        theme="green"
-                        focusId={focusId}
-                        showDate={state.mode === 'CONTROLLER'}
-                    />
+                {/* INFLOWS */}
+                <div className="bg-gray-50/50 rounded-3xl p-4 border border-gray-200/50">
+                    <div className="flex items-center justify-between mb-4 px-2">
+                        <h3 className="font-black text-sm text-emerald-700 uppercase flex items-center gap-2">
+                            <TrendingUp size={16} /> Entradas
+                        </h3>
+                        <span className="bg-emerald-100 text-emerald-700 text-[10px] font-bold px-2 py-0.5 rounded-full">{inflows.length}</span>
+                    </div>
+                    {renderList(inflows, "Nenhuma entrada registrada.", false)}
                 </div>
 
-                {/* RIGHT COL: SAÍDAS */}
+                {/* OUTFLOWS GROUPED */}
                 <div className="space-y-4">
-                    <div className="flex items-center justify-between px-1 pt-0 relative">
-                        <h2 className="text-base font-black text-black flex items-center gap-2">
-                            <TrendingDown size={18} className="text-red-500" />
-                            SAÍDAS & DESPESAS
-                        </h2>
-                         <button 
-                            onClick={() => addOutflowCategory()}
-                            className="flex items-center gap-2 bg-black text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all shadow-md"
-                        >
-                            <Layout size={12} /> Nova Sessão
-                        </button>
+                     <div className="flex items-center justify-between px-2">
+                        <h3 className="font-black text-sm text-red-600 uppercase flex items-center gap-2">
+                            <TrendingDown size={16} /> Saídas por Categoria
+                        </h3>
                     </div>
                     
-                    {data.outflowCategories.map(cat => (
-                        <div key={cat.id} className="animate-in slide-in-from-bottom-2 duration-500">
-                            <DetailedSection 
-                                listId={`cat:${cat.id}`}
-                                title={cat.title}
-                                titleEditable
-                                onTitleChange={(newTitle) => updateCategoryTitle(cat.id, newTitle)}
-                                icon={<CreditCard size={16} className="text-red-400" />}
-                                items={cat.items}
-                                totalValue={cat.items.reduce((a, b) => a + b.value, 0)}
-                                onAddItem={() => addOutflowItem(cat.id)}
-                                onRemoveItem={(itemId) => removeOutflowItem(cat.id, itemId)}
-                                onUpdateItem={(itemId, field, val) => updateOutflowItem(cat.id, itemId, field, val)}
-                                onDuplicateItem={(itemId) => handleDuplicate('cat', itemId, cat.id)}
-                                onDragStart={handleDragStart}
-                                onDragOver={handleDragOver}
-                                onDrop={handleDrop}
-                                theme="red"
-                                focusId={focusId}
-                                catId={cat.id}
-                                customHeaderAction={
-                                    <div className="flex items-center gap-2">
-                                        <button 
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                removeOutflowCategory(cat.id);
-                                            }}
-                                            className="text-gray-400 hover:text-red-600 p-1 transition-colors"
-                                            title="Excluir Sessão"
-                                            type="button"
-                                        >
-                                            <Trash2 size={14} />
-                                        </button>
-                                    </div>
-                                }
-                                showDate={state.mode === 'CONTROLLER'}
-                            />
+                    {outflowCategories.length === 0 ? (
+                        <div className="border-2 border-dashed border-gray-200 rounded-3xl p-8 text-center text-gray-400 font-bold text-xs uppercase">
+                            Nenhuma despesa registrada.
                         </div>
-                    ))}
-                </div>
-            </div>
-
-            {/* 4) NO RADAR & LIMITES (INFORMATIVOS) */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-gray-100">
-                <DetailedSection 
-                    listId="onRadar"
-                    title="No Radar"
-                    icon={<Target size={16} className="text-purple-500" />}
-                    items={data.onRadar}
-                    totalValue={totalRadar}
-                    onAddItem={() => addItem('onRadar')}
-                    onRemoveItem={(id) => removeItem('onRadar', id)}
-                    onUpdateItem={(id, field, val) => updateItem('onRadar', id, field, val)}
-                    onDuplicateItem={(id) => handleDuplicate('onRadar', id)}
-                    theme="purple"
-                    variant="compact"
-                    focusId={focusId}
-                    showDate={state.mode === 'CONTROLLER'}
-                    onDragStart={handleDragStart}
-                    onDragOver={handleDragOver}
-                    onDrop={handleDrop}
-                />
-
-                <DetailedSection 
-                    listId="cardLimits"
-                    title="Limites"
-                    icon={<CreditCard size={16} className="text-gray-500" />}
-                    items={data.cardLimits}
-                    totalValue={data.cardLimits.reduce((a, b) => a + b.value, 0)}
-                    onAddItem={() => addItem('cardLimits')}
-                    onRemoveItem={(id) => removeItem('cardLimits', id)}
-                    onUpdateItem={(id, field, val) => updateItem('cardLimits', id, field, val)}
-                    onDuplicateItem={(id) => handleDuplicate('cardLimits', id)}
-                    theme="gray"
-                    variant="compact"
-                    focusId={focusId}
-                    showDate={state.mode === 'CONTROLLER'}
-                    onDragStart={handleDragStart}
-                    onDragOver={handleDragOver}
-                    onDrop={handleDrop}
-                />
-            </div>
-
-            {/* 5) CHAVES PIX - SMART PARSED */}
-            <div className="bg-black rounded-2xl p-4 shadow-sm border border-gray-800">
-                <div className="flex justify-between items-center mb-2 pb-1 border-b border-gray-800">
-                     <h3 className="font-black text-xs text-white flex items-center gap-2 uppercase tracking-wide">
-                        <Wallet size={14} /> Chaves PIX
-                     </h3>
-                     <button onClick={() => addPixKey()} className="bg-white/10 text-white p-1 rounded-md hover:bg-white hover:text-black transition-colors"><Plus size={12}/></button>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                    {data.pixKeys?.length === 0 && <p className="text-[10px] text-gray-500 italic md:col-span-2 text-center py-1">Use SmartBox: 'Pix [nome] [chave]'</p>}
-                    {data.pixKeys?.map(pk => (
-                        <div key={pk.id} className="bg-white/5 rounded-lg p-2 border border-white/10 flex items-center gap-2 group">
-                            <div className="flex-1 min-w-0">
-                                <div className="flex justify-between items-center">
-                                    <input 
-                                        type="text" 
-                                        value={pk.title} 
-                                        onChange={(e) => updatePixKey(pk.id, 'title', e.target.value)}
-                                        placeholder="TITULAR"
-                                        className="bg-transparent text-[9px] font-bold text-gray-400 uppercase w-full outline-none mb-0.5 placeholder:text-gray-600"
-                                    />
-                                    {pk.type && <span className="text-[8px] text-gray-600 uppercase font-bold px-1 rounded bg-white/5">{pk.type}</span>}
+                    ) : (
+                        outflowCategories.map((cat, idx) => (
+                            <div key={idx} className="bg-white rounded-2xl p-4 border border-gray-200 shadow-sm">
+                                <div className="flex justify-between items-center mb-3 pb-2 border-b border-gray-100">
+                                    <h4 className="font-black text-xs text-gray-500 uppercase tracking-widest">{cat.title}</h4>
+                                    <span className="text-xs font-black text-red-500">
+                                        {formatCurrency(cat.items.reduce((a,b) => a + b.amount, 0))}
+                                    </span>
                                 </div>
-                                <input 
-                                    type="text" 
-                                    value={pk.key} 
-                                    onChange={(e) => updatePixKey(pk.id, 'key', e.target.value)}
-                                    placeholder="Chave..."
-                                    className="bg-transparent text-xs font-medium text-white w-full outline-none placeholder:text-gray-600"
-                                />
+                                {renderList(cat.items, "", true)}
                             </div>
-                            <div className="flex items-center gap-1">
-                                <button 
-                                    onClick={() => handleDuplicate('pixKeys', pk.id)}
-                                    className="p-1.5 rounded-md bg-white/10 text-gray-400 hover:text-white transition-colors"
-                                    title="Duplicar Chave"
-                                >
-                                    <Copy size={12} />
-                                </button>
-                                <button 
-                                    onClick={() => copyPix(pk.key, pk.id)} 
-                                    className={`p-1.5 rounded-md transition-colors ${copiedKeyId === pk.id ? 'bg-green-500 text-white' : 'bg-white/10 text-gray-400 hover:text-white'}`}
-                                    title="Copiar Código"
-                                >
-                                    {copiedKeyId === pk.id ? <Check size={12}/> : <Clipboard size={12}/>}
-                                </button>
-                                <button 
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        removePixKey(pk.id);
-                                    }} 
-                                    className="p-1.5 rounded-md bg-white/5 text-gray-500 hover:text-red-500 transition-colors"
-                                    type="button"
-                                >
-                                    <Trash2 size={12}/>
-                                </button>
-                            </div>
-                        </div>
-                    ))}
+                        ))
+                    )}
                 </div>
             </div>
-
+            
+            {/* Reports Overlay */}
+            {showReports && (
+                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-300">
+                    <div className="bg-white rounded-[2rem] w-full max-w-lg p-6 shadow-2xl relative">
+                        <button onClick={() => setShowReports(false)} className="absolute top-4 right-4 p-2 bg-gray-100 rounded-full hover:bg-gray-200"><X size={20}/></button>
+                        <h3 className="text-2xl font-black mb-6">Relatório Rápido</h3>
+                        
+                        <div className="space-y-4">
+                            <div>
+                                <p className="text-xs font-bold text-gray-400 uppercase">Fluxo Líquido</p>
+                                <div className="h-4 bg-gray-100 rounded-full overflow-hidden flex mt-1">
+                                    <div style={{ width: `${(totalIn / (totalIn + totalOut || 1)) * 100}%` }} className="bg-emerald-500"></div>
+                                    <div style={{ width: `${(totalOut / (totalIn + totalOut || 1)) * 100}%` }} className="bg-red-500"></div>
+                                </div>
+                                <div className="flex justify-between text-[10px] font-bold mt-1">
+                                    <span className="text-emerald-600">{(totalIn / (totalIn + totalOut || 1) * 100).toFixed(0)}% Entrada</span>
+                                    <span className="text-red-600">{(totalOut / (totalIn + totalOut || 1) * 100).toFixed(0)}% Saída</span>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <p className="text-xs font-bold text-gray-400 uppercase mb-2">Top Categorias de Gasto</p>
+                                {outflowCategories
+                                    .sort((a,b) => b.items.reduce((x,y) => x+y.amount,0) - a.items.reduce((x,y) => x+y.amount,0))
+                                    .slice(0, 3)
+                                    .map(cat => (
+                                    <div key={cat.title} className="flex justify-between items-center py-2 border-b border-gray-50">
+                                        <span className="font-bold text-sm">{cat.title}</span>
+                                        <span className="font-mono text-sm">{formatCurrency(cat.items.reduce((a,b) => a+b.amount, 0))}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                 </div>
+            )}
         </div>
     );
 };

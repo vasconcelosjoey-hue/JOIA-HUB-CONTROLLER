@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Users, Plus, Trash2, Calculator, AlertTriangle, CheckCircle2, DollarSign, Building2, Save, Calendar } from 'lucide-react';
 import { formatCurrency } from '../services/utils';
@@ -70,7 +71,8 @@ export const PartnershipManager: React.FC<PartnershipManagerProps> = () => {
     const handleSaveCard = async () => {
         if (!companyName || numericTotal <= 0 || !isBalanced || !dueDay) return;
         
-        const newCard: PartnershipCard = {
+        // Use 'any' type here because addItem hook handles injection of ownerId, createdAt, etc.
+        const newCard: any = {
             id: Date.now().toString(),
             companyName,
             totalValue: numericTotal,

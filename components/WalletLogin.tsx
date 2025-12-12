@@ -2,22 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { Wallet, ArrowRight, Lock, CheckCircle2, UserPlus, LogIn, ChevronRight, KeyRound, Eye, EyeOff, ShieldCheck, Loader2 } from 'lucide-react';
 import { useFirestoreCollection } from '../hooks/useFirestore';
 import { WalletDashboard } from './WalletDashboard';
-
-// --- Types ---
-interface WalletProfile {
-    id: string;
-    name: string;
-    pin: string; 
-    balance: number;
-}
+import { WalletProfile } from '../types';
 
 type ScreenView = 'menu' | 'login-select' | 'login-input' | 'create-name' | 'create-pin' | 'success' | 'dashboard';
 
 export const WalletLogin: React.FC = () => {
-    // --- State ---
     const [view, setView] = useState<ScreenView>('menu');
     
-    // Switch to Firestore Hook
+    // Fetch wallets belonging to the authenticated user
     const { data: wallets, addItem: addWallet } = useFirestoreCollection<WalletProfile>('wallets');
     
     // Login State
@@ -30,10 +22,7 @@ export const WalletLogin: React.FC = () => {
     const [newWalletPin, setNewWalletPin] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     
-    // UI Helpers
     const [showPin, setShowPin] = useState(false);
-
-    // --- Actions ---
 
     const handleCreateWallet = async () => {
         if (newWalletPin.length < 4) {
@@ -42,23 +31,40 @@ export const WalletLogin: React.FC = () => {
         }
 
         setIsSubmitting(true);
-        setErrorMsg(''); // Clear previous errors
+        setErrorMsg(''); 
 
         try {
             const newId = Date.now().toString();
-            const newWallet: WalletProfile = {
-                id: newId,
+            
+            // Explicit type definition for new wallet
+            // ownerId is handled by the hook layer securely
+            const newWallet: Omit<WalletProfile, 'id' | 'ownerId' | 'createdAt'> = {
                 name: newWalletName,
-                pin: newWalletPin,
-                balance: 0
+                pin: newWalletPin, // Note: In production, hash this PIN before sending
+                balance: 0,
+                currency: 'BRL',
+                settings: { allowOverdraft: false, theme: 'light' }
             };
 
-            await addWallet(newWallet);
+            await addWallet({
+                id: newId,
+                ...newWallet,
+                createdAt: new Date().toISOString(),
+                ownerId: '' // Hook will overwrite this with actual auth ID
+            } as WalletProfile);
             
-            // Small delay to ensure Firestore propagation
+            // Wait for Firestore propagation
             await new Promise(resolve => setTimeout(resolve, 800));
 
-            setSelectedWallet(newWallet);
+            // Optimistic set for immediate UI feedback
+            const createdProfile: WalletProfile = {
+                id: newId,
+                ownerId: 'optimistic', // Placeholder until refresh
+                createdAt: new Date().toISOString(),
+                ...newWallet
+            };
+
+            setSelectedWallet(createdProfile);
             setView('success');
         } catch (error) {
             console.error("Error creating wallet:", error);
@@ -80,7 +86,6 @@ export const WalletLogin: React.FC = () => {
         }
     };
 
-    // --- TRANSITION TO DASHBOARD ---
     useEffect(() => {
         if (view === 'success') {
             const t = setTimeout(() => {
@@ -90,10 +95,7 @@ export const WalletLogin: React.FC = () => {
         }
     }, [view]);
 
-    // --- RENDERERS ---
-
     if (view === 'dashboard' && selectedWallet) {
-        // Pass the wallet ID so Dashboard knows where to sync data
         return <WalletDashboard walletId={selectedWallet.id} walletName={selectedWallet.name} />;
     }
 
@@ -122,7 +124,7 @@ export const WalletLogin: React.FC = () => {
                         <Wallet size={32} strokeWidth={2} />
                     </div>
                     <h2 className="text-3xl font-black text-black tracking-tight">JoI.A. Wallet</h2>
-                    <p className="text-gray-500 font-medium">Selecione uma opção de acesso.</p>
+                    <p className="text-gray-500 font-medium">Acesso Restrito: Auth Ativo</p>
                 </div>
 
                 <div className="w-full space-y-4 px-4">
@@ -142,7 +144,7 @@ export const WalletLogin: React.FC = () => {
                             </div>
                             <div className="text-left">
                                 <p className="font-black text-black text-lg">Acessar Existente</p>
-                                <p className="text-xs text-gray-500 font-bold uppercase">Senha Segura</p>
+                                <p className="text-xs text-gray-500 font-bold uppercase">PIN Necessário</p>
                             </div>
                         </div>
                         <ChevronRight className="text-gray-300 group-hover:text-black transition-colors" />
@@ -157,8 +159,8 @@ export const WalletLogin: React.FC = () => {
                                 <UserPlus size={24} />
                             </div>
                             <div className="text-left">
-                                <p className="font-black text-white text-lg">Criar Nova Wallet</p>
-                                <p className="text-xs text-white/60 font-bold uppercase">Protegida por Senha</p>
+                                <p className="font-black text-white text-lg">Nova Carteira</p>
+                                <p className="text-xs text-white/60 font-bold uppercase">Vinculada ao seu ID</p>
                             </div>
                         </div>
                         <ChevronRight className="text-white/50 group-hover:text-white transition-colors" />
@@ -323,7 +325,7 @@ export const WalletLogin: React.FC = () => {
                         value={newWalletPin}
                         onChange={(e) => {
                              if (e.target.value.length <= 6) setNewWalletPin(e.target.value);
-                             if (errorMsg) setErrorMsg(''); // Clear error on input
+                             if (errorMsg) setErrorMsg('');
                         }}
                         onKeyDown={(e) => {
                             if (e.key === 'Enter' && newWalletPin.length >= 4 && !isSubmitting) handleCreateWallet();
@@ -340,7 +342,6 @@ export const WalletLogin: React.FC = () => {
                     </button>
                 </div>
 
-                {/* Error Message Added Here to fix "Nothing Happens" confusion */}
                 {errorMsg && (
                     <p className="text-red-500 font-bold text-sm mb-6 animate-pulse flex items-center gap-1">
                         <ShieldCheck size={14}/> {errorMsg}
