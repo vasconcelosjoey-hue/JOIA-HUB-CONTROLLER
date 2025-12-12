@@ -129,40 +129,40 @@ export const Dashboard: React.FC = () => {
   }
 
   return (
-    <div className="space-y-10 pb-20">
+    <div className="space-y-6 md:space-y-10 pb-20">
       
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6">
         <div>
-            <h2 className="text-4xl font-black text-black tracking-tight flex items-center gap-3">
-                <Briefcase size={32} strokeWidth={2.5}/>
-                Projetos & Empresas
+            <h2 className="text-3xl md:text-4xl font-black text-black tracking-tight flex items-center gap-3">
+                <Briefcase size={28} md:size={32} strokeWidth={2.5}/>
+                Projetos
             </h2>
-            <p className="text-gray-600 font-medium mt-1 text-lg">Carteira de clientes ativa.</p>
+            <p className="text-gray-600 font-medium mt-1 text-base md:text-lg">Carteira de clientes ativa.</p>
         </div>
         <button 
             onClick={() => setIsAdding(!isAdding)}
-            className="bg-black text-white px-6 py-4 rounded-xl font-black uppercase tracking-widest hover:bg-gray-800 transition-all shadow-lg flex items-center justify-center gap-2 active:scale-95"
+            className="w-full md:w-auto bg-black text-white px-6 py-4 rounded-xl font-black uppercase tracking-widest hover:bg-gray-800 transition-all shadow-lg flex items-center justify-center gap-2 active:scale-95"
         >
             {isAdding ? <><X size={20} strokeWidth={3}/> Fechar</> : <><Plus size={20} strokeWidth={3}/> Novo Projeto</>}
         </button>
       </div>
 
       {editingProject && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-              <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto custom-scrollbar border-4" style={{ borderColor: editingProject.brandColor || '#e5e7eb' }}>
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-2 md:p-4 animate-in fade-in duration-200">
+              <div className="bg-white rounded-[1.5rem] md:rounded-[2rem] shadow-2xl w-full max-w-3xl max-h-[85vh] md:max-h-[90vh] overflow-y-auto custom-scrollbar border-4" style={{ borderColor: editingProject.brandColor || '#e5e7eb' }}>
                   
-                  <div className="p-6 border-b border-gray-100 flex justify-between items-center sticky top-0 bg-white/95 backdrop-blur z-20">
-                      <h3 className="font-black text-xl flex items-center gap-2 uppercase tracking-wide">
-                          <Building2 size={24} style={{ color: editingProject.brandColor }} /> 
-                          Detalhes do Contrato
+                  <div className="p-4 md:p-6 border-b border-gray-100 flex justify-between items-center sticky top-0 bg-white/95 backdrop-blur z-20">
+                      <h3 className="font-black text-lg md:text-xl flex items-center gap-2 uppercase tracking-wide truncate">
+                          <Building2 size={24} style={{ color: editingProject.brandColor }} className="shrink-0" /> 
+                          <span className="truncate">Detalhes</span>
                       </h3>
                       <button onClick={() => setEditingProject(null)} className="p-2 hover:bg-gray-100 rounded-full transition-colors"><X size={24} /></button>
                   </div>
                   
-                  <div className="p-8 space-y-8">
-                      <div className="flex flex-col sm:flex-row gap-6 items-center p-6 bg-gray-50 rounded-3xl border border-gray-200">
+                  <div className="p-4 md:p-8 space-y-6 md:space-y-8">
+                      <div className="flex flex-col sm:flex-row gap-6 items-center p-4 md:p-6 bg-gray-50 rounded-3xl border border-gray-200">
                           <div 
-                            className="w-32 h-32 rounded-2xl bg-white border-2 border-dashed border-gray-300 flex items-center justify-center relative overflow-hidden group cursor-pointer shadow-sm hover:border-black transition-colors"
+                            className="w-24 h-24 md:w-32 md:h-32 rounded-2xl bg-white border-2 border-dashed border-gray-300 flex items-center justify-center relative overflow-hidden group cursor-pointer shadow-sm hover:border-black transition-colors shrink-0"
                             onClick={() => fileInputRef.current?.click()}
                           >
                               {editingProject.logo ? (
@@ -176,7 +176,7 @@ export const Dashboard: React.FC = () => {
                           </div>
                           <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleLogoUpload} />
                           
-                          <div className="flex-1 space-y-4 w-full">
+                          <div className="flex-1 space-y-4 w-full text-center sm:text-left">
                               <div className="space-y-1">
                                   <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Nome da Empresa</label>
                                   <input type="text" value={editingProject.nome} onChange={e => setEditingProject({...editingProject, nome: e.target.value})} className="w-full bg-white border border-gray-300 rounded-xl px-4 py-3 font-black text-lg focus:ring-2 focus:ring-black outline-none" />
@@ -196,7 +196,7 @@ export const Dashboard: React.FC = () => {
                                     <div className="flex gap-2">
                                         <input type="text" value={editingProject.website || ''} onChange={e => setEditingProject({...editingProject, website: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 font-medium" />
                                         {editingProject.website && (
-                                            <button onClick={() => openWebsite(editingProject.website)} className="bg-blue-50 text-blue-600 p-2.5 rounded-xl border border-blue-100 hover:bg-blue-100 transition-colors">
+                                            <button onClick={() => openWebsite(editingProject.website)} className="bg-blue-50 text-blue-600 p-2.5 rounded-xl border border-blue-100 hover:bg-blue-100 transition-colors shrink-0">
                                                 <ExternalLink size={18} />
                                             </button>
                                         )}
@@ -207,7 +207,7 @@ export const Dashboard: React.FC = () => {
                                     <div className="flex gap-2">
                                         <input type="text" value={editingProject.address || ''} onChange={e => setEditingProject({...editingProject, address: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 font-medium" placeholder="Rua, Número, Cidade" />
                                         {editingProject.address && (
-                                            <button onClick={() => openGoogleMapsRoute(editingProject.address)} className="bg-green-50 text-green-600 p-2.5 rounded-xl border border-green-100 hover:bg-green-100 transition-colors">
+                                            <button onClick={() => openGoogleMapsRoute(editingProject.address)} className="bg-green-50 text-green-600 p-2.5 rounded-xl border border-green-100 hover:bg-green-100 transition-colors shrink-0">
                                                 <Navigation size={18} />
                                             </button>
                                         )}
@@ -226,7 +226,7 @@ export const Dashboard: React.FC = () => {
                                     <div className="flex gap-2">
                                         <input type="text" value={editingProject.supervisorContact} onChange={e => setEditingProject({...editingProject, supervisorContact: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 font-medium" />
                                         {editingProject.supervisorContact && (
-                                            <button onClick={() => openWhatsApp(editingProject.supervisorContact)} className="bg-emerald-50 text-emerald-600 p-2.5 rounded-xl border border-emerald-100 hover:bg-emerald-100 transition-colors">
+                                            <button onClick={() => openWhatsApp(editingProject.supervisorContact)} className="bg-emerald-50 text-emerald-600 p-2.5 rounded-xl border border-emerald-100 hover:bg-emerald-100 transition-colors shrink-0">
                                                 <MessageCircle size={18} />
                                             </button>
                                         )}
@@ -248,12 +248,12 @@ export const Dashboard: React.FC = () => {
                       </div>
                   </div>
                   
-                  <div className="p-6 border-t border-gray-100 bg-gray-50 flex justify-end gap-3 sticky bottom-0 z-20">
-                      <button onClick={() => setEditingProject(null)} className="px-6 py-3 rounded-xl font-bold text-gray-500 hover:bg-gray-200 transition-colors">Cancelar</button>
+                  <div className="p-4 md:p-6 border-t border-gray-100 bg-gray-50 flex flex-col md:flex-row justify-end gap-3 sticky bottom-0 z-20">
+                      <button onClick={() => setEditingProject(null)} className="order-2 md:order-1 px-6 py-3 rounded-xl font-bold text-gray-500 hover:bg-gray-200 transition-colors w-full md:w-auto">Cancelar</button>
                       <button 
                         onClick={handleSaveEdit} 
                         disabled={isSaving}
-                        className="px-8 py-3 rounded-xl font-bold bg-black text-white hover:bg-gray-800 transition-colors flex items-center gap-2 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="order-1 md:order-2 px-8 py-3 rounded-xl font-bold bg-black text-white hover:bg-gray-800 transition-colors flex items-center justify-center gap-2 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed w-full md:w-auto"
                       >
                           {isSaving ? <Loader2 size={18} className="animate-spin"/> : <Check size={18} />} 
                           {isSaving ? 'Salvando...' : 'Salvar'}
@@ -264,7 +264,7 @@ export const Dashboard: React.FC = () => {
       )}
 
       {isAdding && (
-         <div className="bg-white rounded-3xl p-8 shadow-float border border-gray-200 animate-in slide-in-from-top-10 fade-in duration-500 mb-8">
+         <div className="bg-white rounded-[2rem] p-6 md:p-8 shadow-float border border-gray-200 animate-in slide-in-from-top-10 fade-in duration-500 mb-8">
             <h3 className="text-sm font-black text-gray-400 uppercase tracking-wider mb-6 border-b border-gray-100 pb-2">Novo Contrato</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <div className="space-y-2">
@@ -285,7 +285,7 @@ export const Dashboard: React.FC = () => {
          </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
         {projects.length === 0 ? (
             <div className="col-span-full py-12 flex flex-col items-center justify-center text-gray-400 border-2 border-dashed border-gray-200 rounded-3xl animate-in fade-in">
                 <Briefcase size={48} strokeWidth={1} className="mb-3 opacity-20"/>
@@ -296,7 +296,7 @@ export const Dashboard: React.FC = () => {
                 <div 
                     key={project.id} 
                     onClick={() => setEditingProject(project)}
-                    className="group bg-white rounded-3xl p-5 shadow-apple hover:shadow-float transition-all duration-300 border-2 cursor-pointer relative overflow-hidden flex flex-col gap-4 animate-in fade-in"
+                    className="group bg-white rounded-3xl p-5 shadow-apple hover:shadow-float transition-all duration-300 border-2 cursor-pointer relative overflow-hidden flex flex-col gap-4 animate-in fade-in active:scale-[0.98]"
                     style={{ borderColor: project.brandColor ? `${project.brandColor}20` : '#e5e7eb' }}
                 >
                     <div className="absolute top-0 left-0 w-full h-1.5" style={{ backgroundColor: project.brandColor || '#000' }}></div>

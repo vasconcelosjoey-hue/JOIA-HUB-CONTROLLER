@@ -91,18 +91,18 @@ export const MeetingCreator: React.FC<MeetingCreatorProps> = ({ onBack }) => {
             
             <div className="flex flex-col md:flex-row items-center justify-between mb-8 gap-4">
                  <div className="text-center md:text-left">
-                    <h2 className="text-3xl font-black text-black tracking-tight flex items-center gap-2">
+                    <h2 className="text-3xl font-black text-black tracking-tight flex items-center justify-center md:justify-start gap-2">
                         <Sparkles size={28} className="text-purple-600 fill-purple-600" strokeWidth={1.5}/>
                         Smart Meeting
                     </h2>
-                    <p className="text-gray-600 font-semibold mt-1">Gere convites perfeitos em segundos.</p>
+                    <p className="text-gray-600 font-semibold mt-1 text-center md:text-left">Gere convites perfeitos em segundos.</p>
                 </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
                 
                 {/* Form Card */}
-                <div className="bg-white rounded-3xl p-8 shadow-apple border border-gray-200">
+                <div className="bg-white rounded-3xl p-6 md:p-8 shadow-apple border border-gray-200">
                     <div className="space-y-6">
                         
                         <div className="space-y-2">
@@ -123,7 +123,7 @@ export const MeetingCreator: React.FC<MeetingCreatorProps> = ({ onBack }) => {
                                     type="date"
                                     value={date}
                                     onChange={(e) => setDate(e.target.value)}
-                                    className="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-3.5 text-black font-bold focus:outline-none focus:ring-2 focus:ring-black focus:border-black transition-all"
+                                    className="w-full bg-gray-50 border border-gray-300 rounded-xl px-2 md:px-4 py-3.5 text-black font-bold focus:outline-none focus:ring-2 focus:ring-black focus:border-black transition-all text-sm md:text-base"
                                 />
                             </div>
                             <div className="space-y-2">
@@ -132,7 +132,7 @@ export const MeetingCreator: React.FC<MeetingCreatorProps> = ({ onBack }) => {
                                     type="time"
                                     value={time}
                                     onChange={(e) => setTime(e.target.value)}
-                                    className="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-3.5 text-black font-bold focus:outline-none focus:ring-2 focus:ring-black focus:border-black transition-all"
+                                    className="w-full bg-gray-50 border border-gray-300 rounded-xl px-2 md:px-4 py-3.5 text-black font-bold focus:outline-none focus:ring-2 focus:ring-black focus:border-black transition-all text-sm md:text-base"
                                 />
                             </div>
                         </div>
@@ -169,7 +169,7 @@ export const MeetingCreator: React.FC<MeetingCreatorProps> = ({ onBack }) => {
                         <div className="flex flex-col items-center justify-center pt-2">
                              <button 
                                 onClick={toggleGCal}
-                                className={`px-5 py-2.5 rounded-full font-bold text-xs flex items-center gap-2 transition-all border shadow-sm ${
+                                className={`w-full md:w-auto px-5 py-2.5 rounded-full font-bold text-xs flex items-center justify-center gap-2 transition-all border shadow-sm ${
                                     isGCalConnected 
                                     ? 'bg-green-50 border-green-200 text-green-700' 
                                     : 'bg-white border-gray-200 text-gray-400 hover:border-blue-400 hover:text-blue-600'
@@ -196,7 +196,7 @@ export const MeetingCreator: React.FC<MeetingCreatorProps> = ({ onBack }) => {
 
                 {/* Preview Card */}
                 <div className="relative">
-                    <div className="bg-white rounded-3xl p-8 shadow-float border border-gray-200 relative z-10">
+                    <div className="bg-white rounded-3xl p-6 md:p-8 shadow-float border border-gray-200 relative z-10">
                         <h3 className="text-xs font-black text-gray-400 uppercase tracking-wider mb-4 border-b border-gray-100 pb-2">Resultado</h3>
                         
                         {generatedInvite ? (
@@ -237,7 +237,7 @@ export const MeetingCreator: React.FC<MeetingCreatorProps> = ({ onBack }) => {
                         )}
                     </div>
                     {/* Decoration element behind */}
-                    <div className="absolute -top-4 -right-4 w-full h-full bg-gray-200 rounded-3xl -z-10 rotate-2 opacity-50"></div>
+                    <div className="absolute -top-4 -right-4 w-full h-full bg-gray-200 rounded-3xl -z-10 rotate-2 opacity-50 hidden md:block"></div>
                 </div>
             </div>
         </div>

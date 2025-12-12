@@ -6,7 +6,7 @@ import { AIToolsManager } from './components/AIToolsManager';
 import { PlatformManager } from './components/PlatformManager';
 import { PartnershipManager } from './components/PartnershipManager';
 import { NotificationCenter } from './components/NotificationCenter';
-import { LayoutGrid, CalendarPlus, Bot, Layers, CreditCard, Bell } from 'lucide-react';
+import { LayoutGrid, CalendarPlus, Bot, Layers, CreditCard, Bell, Menu } from 'lucide-react';
 import { useNotifications } from './hooks/useNotifications';
 import { useFirestoreDocument } from './hooks/useFirestore';
 import { GLOBAL_SETTINGS_ID } from './constants';
@@ -30,6 +30,8 @@ function App() {
 
   const setCurrentView = (view: View) => {
       updateSettings({ lastView: view });
+      // Scroll to top on mobile when changing views
+      window.scrollTo(0,0);
   };
 
   // Navigation Items
@@ -37,7 +39,7 @@ function App() {
     { id: 'dashboard', label: 'Projetos', icon: LayoutGrid },
     { id: 'meetings', label: 'Reuniões', icon: CalendarPlus },
     { id: 'ai-tools', label: 'Tools IA', icon: Bot },
-    { id: 'platforms', label: 'Mensalidades', icon: Layers },
+    { id: 'platforms', label: 'Contas', icon: Layers },
     { id: 'partnership', label: 'Parcerias', icon: CreditCard },
   ];
 
@@ -67,8 +69,8 @@ function App() {
           alerts={activeAlerts} 
       />
 
-      {/* SIDEBAR */}
-      <aside className="w-64 bg-white border-r border-gray-200 flex flex-col justify-between shrink-0 z-20">
+      {/* --- DESKTOP/TABLET SIDEBAR (Hidden on Mobile) --- */}
+      <aside className="hidden md:flex w-64 bg-white border-r border-gray-200 flex-col justify-between shrink-0 z-20 transition-all">
         <div>
           <div className="h-16 flex items-center px-6 border-b border-gray-100">
              <div className="w-8 h-8 bg-black rounded-xl flex items-center justify-center text-white font-black text-xs mr-3 shadow-sm">
@@ -134,28 +136,75 @@ function App() {
         </div>
       </aside>
 
-      {/* MAIN CONTENT WRAPPER */}
+      {/* --- MAIN CONTENT WRAPPER --- */}
       <div className="flex-1 flex flex-col h-full overflow-hidden relative bg-[#F5F5F7]">
         
-        {/* TOP HEADER */}
-        <header className="h-16 bg-white/80 backdrop-blur-xl border-b border-gray-200 flex items-center justify-between px-8 shrink-0 z-10 sticky top-0">
+        {/* --- MOBILE TOP HEADER (Visible only on Mobile) --- */}
+        <header className="md:hidden h-16 bg-white/90 backdrop-blur-xl border-b border-gray-200 flex items-center justify-between px-4 shrink-0 z-10 sticky top-0">
+             <div className="flex items-center gap-2">
+                 <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center text-white font-black text-xs shadow-sm">
+                    J.
+                 </div>
+                 <span className="font-bold text-lg tracking-tight text-black">JoI.A.</span>
+             </div>
+             <button
+                onClick={() => setIsAlertsOpen(true)}
+                className="relative p-2 rounded-full hover:bg-gray-100 transition-colors"
+            >
+                <Bell size={20} strokeWidth={2} />
+                {activeAlerts.length > 0 && (
+                    <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
+                )}
+            </button>
+        </header>
+
+        {/* --- DESKTOP HEADER (Hidden on Mobile) --- */}
+        <header className="hidden md:flex h-16 bg-white/80 backdrop-blur-xl border-b border-gray-200 items-center justify-between px-8 shrink-0 z-10 sticky top-0">
           <div>
             <h1 className="text-2xl font-black text-black tracking-tight">
                {getPageTitle()}
             </h1>
           </div>
-
           <div className="flex items-center gap-4">
-            {/* Header Actions can go here */}
+             {/* Desktop specific header actions if needed */}
           </div>
         </header>
 
-        {/* CONTENT AREA */}
-        <main className="flex-1 overflow-y-auto overflow-x-hidden p-6 md:p-8 custom-scrollbar">
-          <div className="max-w-7xl mx-auto pb-10">
+        {/* --- CONTENT AREA --- */}
+        <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-8 custom-scrollbar pb-24 md:pb-10">
+          <div className="max-w-7xl mx-auto">
+             {/* Mobile Page Title (since desktop header is hidden on mobile) */}
+             <div className="md:hidden mb-6 mt-2">
+                <h1 className="text-2xl font-black text-black tracking-tight">{getPageTitle()}</h1>
+             </div>
              {renderContent()}
           </div>
         </main>
+
+        {/* --- MOBILE BOTTOM NAVIGATION (Visible only on Mobile) --- */}
+        <nav className="md:hidden fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 pb-safe z-30 flex justify-around items-center px-2 py-3 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = currentView === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => setCurrentView(item.id as View)}
+                  className={`flex flex-col items-center justify-center gap-1 w-full p-2 rounded-xl transition-all duration-300 ${
+                    isActive ? 'text-black' : 'text-gray-400'
+                  }`}
+                >
+                  <div className={`p-1.5 rounded-full transition-all ${isActive ? 'bg-black text-white shadow-lg translate-y-[-2px]' : ''}`}>
+                      <Icon size={20} strokeWidth={isActive ? 2.5 : 2} />
+                  </div>
+                  <span className={`text-[9px] font-bold ${isActive ? 'opacity-100' : 'opacity-0 scale-0'} transition-all duration-200 absolute bottom-1`}>
+                      {item.label}
+                  </span>
+                </button>
+              );
+            })}
+        </nav>
+
       </div>
     </div>
   );

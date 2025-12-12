@@ -34,7 +34,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, 
 
     // --- TOAST RENDERER ---
     const renderToasts = () => (
-        <div className="fixed top-4 left-0 w-full flex flex-col items-center pointer-events-none z-[100] px-4 gap-2 sm:items-end sm:right-4 sm:left-auto sm:w-auto">
+        <div className="fixed top-20 md:top-4 left-0 w-full flex flex-col items-center pointer-events-none z-[100] px-4 gap-2 sm:items-end sm:right-4 sm:left-auto sm:w-auto">
             {visibleToasts.map((alert) => (
                 <div 
                     key={`toast-${alert.id}`}
@@ -70,10 +70,10 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, 
 
         return (
             <div className="fixed inset-0 z-[150] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
-                <div className="bg-white w-full sm:max-w-md h-[80vh] sm:h-auto sm:max-h-[80vh] rounded-t-[2rem] sm:rounded-[2rem] shadow-2xl flex flex-col animate-in slide-in-from-bottom-10 duration-300">
+                <div className="bg-white w-full h-[85vh] sm:max-w-md sm:h-auto sm:max-h-[80vh] rounded-t-[2rem] sm:rounded-[2rem] shadow-2xl flex flex-col animate-in slide-in-from-bottom-10 duration-300">
                     
                     {/* Header */}
-                    <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-white rounded-t-[2rem]">
+                    <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-white rounded-t-[2rem] shrink-0">
                         <div className="flex items-center gap-3">
                             <div className="bg-black text-white p-2.5 rounded-xl">
                                 <Bell size={20} className="animate-pulse" />
@@ -127,8 +127,8 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, 
                     </div>
 
                     {/* Footer */}
-                    <div className="p-4 border-t border-gray-100 bg-gray-50 rounded-b-[2rem] sm:rounded-b-[2rem]">
-                        <button onClick={onClose} className="w-full py-3 bg-white border border-gray-200 rounded-xl font-bold text-gray-600 hover:bg-gray-100">
+                    <div className="p-4 border-t border-gray-100 bg-gray-50 rounded-b-none sm:rounded-b-[2rem] pb-8 sm:pb-4 shrink-0">
+                        <button onClick={onClose} className="w-full py-3 bg-white border border-gray-200 rounded-xl font-bold text-gray-600 hover:bg-gray-100 active:scale-[0.98]">
                             Fechar
                         </button>
                     </div>

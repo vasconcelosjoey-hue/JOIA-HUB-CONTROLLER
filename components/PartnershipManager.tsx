@@ -109,21 +109,21 @@ export const PartnershipManager: React.FC<PartnershipManagerProps> = () => {
     return (
         <div className="space-y-8 animate-in slide-in-from-bottom duration-500 pb-20">
              <div className="text-center md:text-left">
-                <h2 className="text-4xl font-black text-black tracking-tight flex items-center justify-center md:justify-start gap-3">
-                    <Users size={32} className="text-black" strokeWidth={2.5} />
-                    Gestão de Parcerias
+                <h2 className="text-3xl md:text-4xl font-black text-black tracking-tight flex items-center justify-center md:justify-start gap-3">
+                    <Users size={28} md:size={32} className="text-black" strokeWidth={2.5} />
+                    Parcerias
                 </h2>
-                <p className="text-gray-600 font-medium mt-1 text-lg">Divisão de receitas e rateio entre atores.</p>
+                <p className="text-gray-600 font-medium mt-1 text-base md:text-lg">Divisão de receitas e rateio entre atores.</p>
             </div>
 
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 items-start">
                 
                 {/* CREATOR CARD */}
-                <div className="bg-white rounded-[2rem] p-8 shadow-float border border-gray-200 relative overflow-hidden">
+                <div className="bg-white rounded-3xl md:rounded-[2rem] p-6 md:p-8 shadow-float border border-gray-200 relative overflow-hidden">
                     <div className="absolute top-0 left-0 w-full h-2 bg-black"></div>
                     
                     <h3 className="text-sm font-black text-gray-400 uppercase tracking-wider mb-6 pb-2 border-b border-gray-100 flex justify-between items-center">
-                        Novo Contrato de Rateio
+                        Novo Rateio
                         <Calculator size={16} />
                     </h3>
 
@@ -181,7 +181,7 @@ export const PartnershipManager: React.FC<PartnershipManagerProps> = () => {
                         </div>
 
                         {/* Partners Section */}
-                        <div className="bg-gray-50 rounded-2xl p-4 border border-gray-200 space-y-3">
+                        <div className="bg-gray-50 rounded-2xl p-3 md:p-4 border border-gray-200 space-y-3">
                             <div className="flex justify-between items-center mb-2 px-1">
                                 <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Atores Envolvidos</label>
                                 <button 
@@ -189,24 +189,35 @@ export const PartnershipManager: React.FC<PartnershipManagerProps> = () => {
                                     className="text-[10px] font-bold bg-blue-100 text-blue-600 px-3 py-1.5 rounded-lg hover:bg-blue-200 transition-colors flex items-center gap-1"
                                     title="Dividir valor total igualmente"
                                 >
-                                    <Calculator size={12} /> Divisão Inteligente
+                                    <Calculator size={12} /> <span className="hidden sm:inline">Divisão Inteligente</span><span className="sm:hidden">Auto</span>
                                 </button>
                             </div>
                             
-                            <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                            <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1 custom-scrollbar">
                                 {partners.map((partner, index) => (
-                                    <div key={partner.id} className="flex gap-3 items-center animate-in slide-in-from-left duration-300">
-                                        <div className="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center text-xs font-bold shrink-0">
-                                            {index + 1}
+                                    <div key={partner.id} className="flex flex-col sm:flex-row gap-2 sm:gap-3 items-start sm:items-center animate-in slide-in-from-left duration-300 p-2 sm:p-0 bg-white sm:bg-transparent rounded-xl sm:rounded-none border sm:border-none border-gray-100">
+                                        <div className="flex w-full sm:w-auto items-center gap-2">
+                                            <div className="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center text-xs font-bold shrink-0">
+                                                {index + 1}
+                                            </div>
+                                            <input 
+                                                type="text" 
+                                                value={partner.name}
+                                                onChange={(e) => updatePartner(partner.id, 'name', e.target.value)}
+                                                placeholder="Nome do Sócio"
+                                                className="flex-1 bg-white border border-gray-200 rounded-xl px-3 py-2.5 text-sm font-bold focus:border-black outline-none"
+                                            />
+                                            {/* Mobile Delete Button (Shows here for layout reasons) */}
+                                             {partners.length > 1 && (
+                                                <button 
+                                                    onClick={() => handleRemovePartnerInput(partner.id)}
+                                                    className="sm:hidden text-gray-300 hover:text-red-500 transition-colors p-2"
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            )}
                                         </div>
-                                        <input 
-                                            type="text" 
-                                            value={partner.name}
-                                            onChange={(e) => updatePartner(partner.id, 'name', e.target.value)}
-                                            placeholder="Nome do Sócio"
-                                            className="flex-1 bg-white border border-gray-200 rounded-xl px-3 py-2.5 text-sm font-bold focus:border-black outline-none"
-                                        />
-                                        <div className="relative w-32 shrink-0">
+                                        <div className="relative w-full sm:w-32 shrink-0">
                                             <input 
                                                 type="number" 
                                                 value={partner.value === 0 ? '' : partner.value}
@@ -216,10 +227,11 @@ export const PartnershipManager: React.FC<PartnershipManagerProps> = () => {
                                             />
                                             <span className="absolute left-2.5 top-2.5 text-gray-400 text-xs font-bold">R$</span>
                                         </div>
+                                        {/* Desktop Delete Button */}
                                         {partners.length > 1 && (
                                             <button 
                                                 onClick={() => handleRemovePartnerInput(partner.id)}
-                                                className="text-gray-300 hover:text-red-500 transition-colors"
+                                                className="hidden sm:block text-gray-300 hover:text-red-500 transition-colors"
                                             >
                                                 <Trash2 size={16} />
                                             </button>
@@ -237,18 +249,18 @@ export const PartnershipManager: React.FC<PartnershipManagerProps> = () => {
                         </div>
 
                         {/* CALCULATION ALERT / STATUS BAR */}
-                        <div className={`rounded-xl p-4 flex items-center justify-between border transition-all duration-500 ${
+                        <div className={`rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between border transition-all duration-500 gap-3 ${
                             isBalanced 
                             ? 'bg-emerald-50 border-emerald-100' 
                             : 'bg-red-50 border-red-100 animate-pulse'
                         }`}>
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-3 w-full sm:w-auto">
                                 {isBalanced ? (
-                                    <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center">
+                                    <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
                                         <CheckCircle2 size={18} />
                                     </div>
                                 ) : (
-                                    <div className="w-8 h-8 rounded-full bg-red-100 text-red-600 flex items-center justify-center">
+                                    <div className="w-8 h-8 rounded-full bg-red-100 text-red-600 flex items-center justify-center shrink-0">
                                         <AlertTriangle size={18} />
                                     </div>
                                 )}
@@ -261,7 +273,7 @@ export const PartnershipManager: React.FC<PartnershipManagerProps> = () => {
                                     </p>
                                 </div>
                             </div>
-                            <div className="text-right">
+                            <div className="text-right w-full sm:w-auto border-t sm:border-t-0 border-gray-200 pt-2 sm:pt-0">
                                 <p className="text-[10px] font-bold text-gray-400 uppercase">Diferença</p>
                                 <p className={`text-lg font-black ${isBalanced ? 'text-emerald-600' : 'text-red-600'}`}>
                                     {formatCurrency(difference)}
@@ -308,21 +320,21 @@ export const PartnershipManager: React.FC<PartnershipManagerProps> = () => {
                                 <div key={card.id} className="bg-white rounded-3xl p-6 shadow-apple hover:shadow-float transition-all duration-300 border border-gray-100 group relative animate-in fade-in">
                                     <button 
                                         onClick={() => handleConfirmDelete(card.id)}
-                                        className="absolute top-6 right-6 text-gray-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                                        className="absolute top-6 right-6 text-gray-300 hover:text-red-500 transition-colors opacity-100 md:opacity-0 md:group-hover:opacity-100"
                                     >
                                         <Trash2 size={18} />
                                     </button>
 
                                     <div className="flex items-center gap-4 mb-6">
-                                        <div className="w-14 h-14 bg-gray-50 rounded-2xl flex items-center justify-center text-gray-700 border border-gray-100 relative">
+                                        <div className="w-14 h-14 bg-gray-50 rounded-2xl flex items-center justify-center text-gray-700 border border-gray-100 relative shrink-0">
                                             <Building2 size={24} strokeWidth={1.5} />
                                             {/* Due Day Badge */}
                                             <div className="absolute -bottom-2 -right-2 bg-black text-white text-[10px] font-bold px-2 py-0.5 rounded-full border-2 border-white">
                                                 Dia {card.dueDay}
                                             </div>
                                         </div>
-                                        <div>
-                                            <h4 className="font-black text-lg leading-tight">{card.companyName}</h4>
+                                        <div className="overflow-hidden">
+                                            <h4 className="font-black text-lg leading-tight truncate">{card.companyName}</h4>
                                             <p className="text-sm font-bold text-gray-400">{formatCurrency(card.totalValue)} / mês</p>
                                         </div>
                                     </div>
@@ -331,12 +343,12 @@ export const PartnershipManager: React.FC<PartnershipManagerProps> = () => {
                                         {card.partners.map(p => (
                                             <div key={p.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-xl border border-gray-100">
                                                 <div className="flex items-center gap-3">
-                                                    <div className="w-6 h-6 rounded-full bg-black text-white text-[10px] font-bold flex items-center justify-center">
+                                                    <div className="w-6 h-6 rounded-full bg-black text-white text-[10px] font-bold flex items-center justify-center shrink-0">
                                                         {p.name.charAt(0).toUpperCase()}
                                                     </div>
-                                                    <span className="font-bold text-sm text-gray-700">{p.name}</span>
+                                                    <span className="font-bold text-sm text-gray-700 truncate">{p.name}</span>
                                                 </div>
-                                                <span className="font-black text-sm text-black">{formatCurrency(p.value)}</span>
+                                                <span className="font-black text-sm text-black whitespace-nowrap">{formatCurrency(p.value)}</span>
                                             </div>
                                         ))}
                                     </div>
