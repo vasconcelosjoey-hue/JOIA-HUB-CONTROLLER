@@ -112,7 +112,7 @@ function App() {
             initial="hidden"
             animate="show"
             exit="exit"
-            className="min-h-screen flex flex-col items-center justify-center relative"
+            className="w-screen h-screen relative overflow-hidden bg-apple-bg"
           >
               {/* Background Glow */}
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-to-tr from-gray-200 to-transparent rounded-full opacity-30 blur-[100px] -z-10" />
@@ -122,92 +122,91 @@ function App() {
                   {renderHubButton('wallet', <Wallet size={16} />, 'WALLET', '', false)}
               </motion.div>
 
-              {/* CENTRAL LAYOUT */}
-              <div className="relative w-full max-w-5xl h-full min-h-[600px] flex flex-col md:flex-row items-center justify-center mt-20 md:mt-0">
+              {/* --- DESKTOP ORBITAL SYSTEM (Centered 600x600 Container) --- */}
+              <div className="hidden md:block absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px]">
                   
-                  {/* --- NEURAL CORE --- */}
+                  {/* Orbit Rings */}
+                  <motion.div 
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 0.5, scale: 1 }}
+                    transition={{ duration: 1.5, delay: 0.5 }}
+                    className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[450px] h-[450px] border border-gray-300 rounded-full pointer-events-none" 
+                  />
+                  <motion.div 
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 0.3, scale: 1 }}
+                    transition={{ duration: 1.5, delay: 0.7 }}
+                    className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] border border-dashed border-gray-300 rounded-full pointer-events-none" 
+                  />
+
+                  {/* Neural Core (Center) */}
                   <motion.div 
                     initial={{ scale: 0, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
                     transition={{ duration: 1, ease: "backOut", delay: 0.2 }}
-                    className="relative z-30 w-48 h-48 md:absolute md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 bg-white/50 backdrop-blur-xl rounded-full shadow-float flex items-center justify-center border border-white/60 mb-10 md:mb-0"
+                    className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-30 w-48 h-48 bg-white/50 backdrop-blur-xl rounded-full shadow-float flex items-center justify-center border border-white/60"
                   >
                       <NeuralCore className="w-full h-full text-black opacity-90" />
                   </motion.div>
 
-                  {/* --- SATELLITES (DESKTOP) --- */}
-                  <div className="hidden md:block w-[600px] h-[600px] absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
-                      {/* Orbit Rings */}
-                      <motion.div 
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{ opacity: 0.5, scale: 1 }}
-                        transition={{ duration: 1.5, delay: 0.5 }}
-                        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[450px] h-[450px] border border-gray-300 rounded-full" 
-                      />
-                      <motion.div 
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{ opacity: 0.3, scale: 1 }}
-                        transition={{ duration: 1.5, delay: 0.7 }}
-                        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] border border-dashed border-gray-300 rounded-full" 
-                      />
-
-                      {/* Satellite Buttons (Pointer events auto to allow clicking) */}
-                      <div className="pointer-events-auto w-full h-full relative">
-                        {/* 
-                            GRID SYSTEM: 600x600 Container
-                            Center: 300, 300
-                            Radius: 260px
-                            Positions calculated to form a perfect hexagon with Top at 0deg
-                        */}
-
-                        {/* 1. Top (Projetos) - (300, 40) */}
-                        <div className="absolute left-1/2 top-[40px] -translate-x-1/2 -translate-y-1/2">
-                            <motion.div variants={itemVariants}>
-                                {renderHubButton('dashboard', <LayoutGrid size={24} strokeWidth={2} />, 'Projetos')}
-                            </motion.div>
-                        </div>
-                        
-                        {/* 2. Top Right (Reunião) - (525, 170) */}
-                        <div className="absolute left-[525px] top-[170px] -translate-x-1/2 -translate-y-1/2">
-                            <motion.div variants={itemVariants}>
-                                {renderHubButton('meetings', <CalendarPlus size={24} strokeWidth={2} />, 'Reunião')}
-                            </motion.div>
-                        </div>
-
-                        {/* 3. Bottom Right (Tools IA) - (525, 430) */}
-                        <div className="absolute left-[525px] top-[430px] -translate-x-1/2 -translate-y-1/2">
-                            <motion.div variants={itemVariants}>
-                                {renderHubButton('ai-tools', <Bot size={24} strokeWidth={2} />, 'Tools IA')}
-                            </motion.div>
-                        </div>
-
-                        {/* 4. Bottom (Parceria) - (300, 560) */}
-                        <div className="absolute left-1/2 top-[560px] -translate-x-1/2 -translate-y-1/2">
-                            <motion.div variants={itemVariants}>
-                                {renderHubButton('partnership', <CreditCard size={24} strokeWidth={2} />, 'Parceria')}
-                            </motion.div>
-                        </div>
-
-                         {/* 5. Bottom Left (Mensal) - (75, 430) */}
-                         <div className="absolute left-[75px] top-[430px] -translate-x-1/2 -translate-y-1/2">
-                            <motion.div variants={itemVariants}>
-                                {renderHubButton('platforms', <Layers size={24} strokeWidth={2} />, 'Mensal')}
-                            </motion.div>
-                        </div>
-
-                        {/* 6. Top Left (Alertas) - (75, 170) */}
-                        <div className="absolute left-[75px] top-[170px] -translate-x-1/2 -translate-y-1/2">
-                            <motion.div variants={itemVariants}>
-                                {renderHubButton('alerts', <Bell size={24} strokeWidth={2} />, 'Alertas', '', true)}
-                            </motion.div>
-                        </div>
-                      </div>
+                  {/* Satellite Buttons (Absolute positions in 600x600) */}
+                  
+                  {/* 1. Top (Projetos) */}
+                  <div className="absolute left-1/2 top-[40px] -translate-x-1/2 -translate-y-1/2 z-40">
+                      <motion.div variants={itemVariants}>
+                          {renderHubButton('dashboard', <LayoutGrid size={24} strokeWidth={2} />, 'Projetos')}
+                      </motion.div>
+                  </div>
+                  
+                  {/* 2. Top Right (Reunião) */}
+                  <div className="absolute left-[525px] top-[170px] -translate-x-1/2 -translate-y-1/2 z-40">
+                      <motion.div variants={itemVariants}>
+                          {renderHubButton('meetings', <CalendarPlus size={24} strokeWidth={2} />, 'Reunião')}
+                      </motion.div>
                   </div>
 
-                  {/* --- GRID (MOBILE) --- */}
+                  {/* 3. Bottom Right (Tools IA) */}
+                  <div className="absolute left-[525px] top-[430px] -translate-x-1/2 -translate-y-1/2 z-40">
+                      <motion.div variants={itemVariants}>
+                          {renderHubButton('ai-tools', <Bot size={24} strokeWidth={2} />, 'Tools IA')}
+                      </motion.div>
+                  </div>
+
+                  {/* 4. Bottom (Parceria) */}
+                  <div className="absolute left-1/2 top-[560px] -translate-x-1/2 -translate-y-1/2 z-40">
+                      <motion.div variants={itemVariants}>
+                          {renderHubButton('partnership', <CreditCard size={24} strokeWidth={2} />, 'Parceria')}
+                      </motion.div>
+                  </div>
+
+                   {/* 5. Bottom Left (Mensal) */}
+                   <div className="absolute left-[75px] top-[430px] -translate-x-1/2 -translate-y-1/2 z-40">
+                      <motion.div variants={itemVariants}>
+                          {renderHubButton('platforms', <Layers size={24} strokeWidth={2} />, 'Mensal')}
+                      </motion.div>
+                  </div>
+
+                  {/* 6. Top Left (Alertas) */}
+                  <div className="absolute left-[75px] top-[170px] -translate-x-1/2 -translate-y-1/2 z-40">
+                      <motion.div variants={itemVariants}>
+                          {renderHubButton('alerts', <Bell size={24} strokeWidth={2} />, 'Alertas', '', true)}
+                      </motion.div>
+                  </div>
+              </div>
+
+              {/* --- MOBILE GRID (Fallback for < md) --- */}
+              <div className="md:hidden w-full h-full flex flex-col items-center justify-center p-6 pt-20">
+                  <motion.div 
+                    initial={{ scale: 0 }} 
+                    animate={{ scale: 1 }} 
+                    className="w-32 h-32 bg-white/50 backdrop-blur-xl rounded-full shadow-float flex items-center justify-center border border-white/60 mb-8"
+                  >
+                        <NeuralCore className="w-full h-full text-black opacity-90" />
+                  </motion.div>
+
                   <motion.div 
                     variants={containerVariants}
-                    className="md:hidden grid grid-cols-2 gap-4 px-6 pb-20 w-full max-w-sm"
+                    className="grid grid-cols-2 gap-4 w-full max-w-sm"
                   >
                        <motion.div variants={itemVariants}>{renderHubButton('dashboard', <LayoutGrid size={24} strokeWidth={2} />, 'Projetos', 'w-full aspect-square')}</motion.div>
                        <motion.div variants={itemVariants}>{renderHubButton('meetings', <CalendarPlus size={24} strokeWidth={2} />, 'Reunião', 'w-full aspect-square')}</motion.div>
@@ -222,9 +221,9 @@ function App() {
                 initial={{ opacity: 0 }} 
                 animate={{ opacity: 0.5 }} 
                 transition={{ delay: 1 }}
-                className="absolute bottom-8 text-center"
+                className="absolute bottom-6 left-0 w-full text-center pointer-events-none"
               >
-                  <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-gray-500">JoI.A. Controller v2.0</p>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-gray-400">JoI.A. Controller v2.1</p>
               </motion.div>
           </motion.div>
         ) : (
