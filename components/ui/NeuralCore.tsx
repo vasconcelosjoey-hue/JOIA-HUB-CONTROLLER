@@ -1,3 +1,4 @@
+
 import React from 'react';
 
 interface NeuralCoreProps {
@@ -57,7 +58,7 @@ export const NeuralCore: React.FC<NeuralCoreProps> = ({ className }) => {
 
         {/* TEXT LOGO - CENTERED & ENLARGED */}
         <g className="pointer-events-none drop-shadow-md">
-            {/* Moved Y from 110 to 105 for better vertical centering */}
+            {/* Main Text */}
             <text 
                 x="100" 
                 y="105" 
@@ -68,9 +69,9 @@ export const NeuralCore: React.FC<NeuralCoreProps> = ({ className }) => {
                 letterSpacing="-1" 
                 style={{ fontFamily: 'Inter, sans-serif' }}
             >
-                JoI.A.
+                HUB
             </text>
-            {/* Increased font size from 9 to 12 and adjusted Y/Spacing */}
+            {/* Subtext */}
             <text 
                 x="100" 
                 y="125" 
@@ -82,7 +83,7 @@ export const NeuralCore: React.FC<NeuralCoreProps> = ({ className }) => {
                 opacity="0.9"
                 style={{ fontFamily: 'Inter, sans-serif' }}
             >
-                NEURAL HUB
+                CONTROLLER
             </text>
         </g>
 

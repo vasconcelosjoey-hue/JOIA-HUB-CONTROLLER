@@ -74,9 +74,9 @@ function App() {
         <div>
           <div className="h-14 flex items-center px-5 border-b border-gray-100">
              <div className="w-7 h-7 bg-black rounded-lg flex items-center justify-center text-white font-black text-[10px] mr-2.5 shadow-sm">
-                J.
+                H.
              </div>
-             <span className="font-bold text-base tracking-tight text-black">JoI.A. HUB</span>
+             <span className="font-bold text-base tracking-tight text-black">HUB Controller</span>
           </div>
 
           <nav className="p-3 space-y-0.5">
@@ -143,9 +143,9 @@ function App() {
         <header className="md:hidden h-14 bg-white/90 backdrop-blur-xl border-b border-gray-200 flex items-center justify-between px-4 shrink-0 z-10 sticky top-0">
              <div className="flex items-center gap-2">
                  <div className="w-7 h-7 bg-black rounded-lg flex items-center justify-center text-white font-black text-[10px] shadow-sm">
-                    J.
+                    H.
                  </div>
-                 <span className="font-bold text-base tracking-tight text-black">JoI.A.</span>
+                 <span className="font-bold text-base tracking-tight text-black">HUB Controller</span>
              </div>
              <button
                 onClick={() => setIsAlertsOpen(true)}
