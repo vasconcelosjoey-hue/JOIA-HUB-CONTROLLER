@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Users, Plus, Trash2, Calculator, AlertTriangle, CheckCircle2, DollarSign, Building2, Save, Calendar, Loader2 } from 'lucide-react';
+import { Users, Plus, Trash2, Calculator, AlertTriangle, CheckCircle2, DollarSign, Building2, Save, Calendar, Loader2, ChevronDown, ChevronUp, Search } from 'lucide-react';
 import { formatCurrency } from '../services/utils';
 import { Partner, PartnershipCard } from '../types';
 import { useFirestoreCollection } from '../hooks/useFirestore';
@@ -17,6 +17,10 @@ export const PartnershipManager: React.FC<PartnershipManagerProps> = () => {
     const { data: cards, loading, addItem, deleteItem } = useFirestoreCollection<PartnershipCard>('partnerships');
 
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
+    
+    // Expanded State for Cards (Set of IDs)
+    const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
 
     // Form States
     const [companyName, setCompanyName] = useState('');
@@ -35,6 +39,18 @@ export const PartnershipManager: React.FC<PartnershipManagerProps> = () => {
     const distributedTotal = partners.reduce((acc, p) => acc + p.value, 0);
     const difference = numericTotal - distributedTotal;
     const isBalanced = Math.abs(difference) < 0.05; // Allowing float small margin
+
+    const toggleCard = (id: string) => {
+        setExpandedCards(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) {
+                next.delete(id);
+            } else {
+                next.add(id);
+            }
+            return next;
+        });
+    };
 
     const handleAddPartnerInput = () => {
         setPartners([...partners, { id: generateId(), name: '', value: 0 }]);
@@ -100,11 +116,18 @@ export const PartnershipManager: React.FC<PartnershipManagerProps> = () => {
         }
     };
 
-    const handleConfirmDelete = async (id: string) => {
+    const handleConfirmDelete = async (id: string, e: React.MouseEvent) => {
+        e.stopPropagation();
         if (window.confirm('Tem certeza que deseja apagar este contrato de parceria?')) {
             await deleteItem(id);
         }
     }
+
+    // Filter cards
+    const filteredCards = cards.filter(card => 
+        card.companyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        card.partners.some(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()))
+    );
 
     return (
         <div className="space-y-6 animate-in slide-in-from-bottom duration-500 pb-20">
@@ -299,11 +322,24 @@ export const PartnershipManager: React.FC<PartnershipManagerProps> = () => {
 
                 {/* GRID OF EXISTING CARDS */}
                 <div className="space-y-5">
-                    <div className="flex items-center justify-between">
-                        <h3 className="font-black text-lg text-gray-800">Contratos Ativos</h3>
-                        <span className="bg-gray-200 text-gray-600 text-[10px] font-bold px-2 py-0.5 rounded-full">
-                            {loading ? '...' : cards.length}
-                        </span>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div className="flex items-center justify-between">
+                            <h3 className="font-black text-lg text-gray-800">Contratos Ativos</h3>
+                            <span className="bg-gray-200 text-gray-600 text-[10px] font-bold px-2 py-0.5 rounded-full ml-2">
+                                {loading ? '...' : filteredCards.length}
+                            </span>
+                        </div>
+                         {/* SEARCH BAR */}
+                         <div className="relative w-full sm:w-64">
+                              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                              <input 
+                                  type="text" 
+                                  placeholder="BUSCAR PARCERIA..." 
+                                  value={searchTerm}
+                                  onChange={(e) => setSearchTerm(e.target.value)}
+                                  className="w-full bg-white border border-gray-200 rounded-lg pl-9 pr-3 py-2 text-xs font-bold uppercase focus:ring-2 focus:ring-black focus:outline-none placeholder:normal-case"
+                              />
+                          </div>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-1 gap-5 min-h-[100px]">
@@ -311,54 +347,71 @@ export const PartnershipManager: React.FC<PartnershipManagerProps> = () => {
                             <div className="p-10 flex items-center justify-center text-gray-400">
                                 <Loader2 size={24} className="animate-spin mr-2"/> Carregando...
                             </div>
-                        ) : cards.length === 0 ? (
+                        ) : filteredCards.length === 0 ? (
                             <div className="text-center py-8 text-gray-400 border-2 border-dashed border-gray-200 rounded-2xl text-sm">
-                                Nenhuma parceria cadastrada.
+                                Nenhuma parceria encontrada.
                             </div>
                         ) : (
-                            cards.map(card => (
-                                <div key={card.id} className="bg-white rounded-2xl p-5 shadow-apple hover:shadow-float transition-all duration-300 border border-gray-100 group relative animate-in fade-in">
-                                    <button 
-                                        onClick={() => handleConfirmDelete(card.id)}
-                                        className="absolute top-5 right-5 text-gray-300 hover:text-red-500 transition-colors opacity-100 md:opacity-0 md:group-hover:opacity-100"
-                                    >
-                                        <Trash2 size={16} />
-                                    </button>
+                            filteredCards.map(card => {
+                                const isExpanded = expandedCards.has(card.id);
+                                return (
+                                    <div key={card.id} className="bg-white rounded-2xl p-5 shadow-apple hover:shadow-float transition-all duration-300 border border-gray-100 group relative animate-in fade-in">
+                                        <button 
+                                            onClick={(e) => handleConfirmDelete(card.id, e)}
+                                            className="absolute top-5 right-5 text-gray-300 hover:text-red-500 transition-colors z-20"
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
 
-                                    <div className="flex items-center gap-4 mb-5">
-                                        <div className="w-12 h-12 bg-gray-50 rounded-xl flex items-center justify-center text-gray-700 border border-gray-100 relative shrink-0">
-                                            <Building2 size={20} strokeWidth={1.5} />
-                                            {/* Due Day Badge */}
-                                            <div className="absolute -bottom-1.5 -right-1.5 bg-black text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full border-2 border-white">
-                                                Dia {card.dueDay}
-                                            </div>
-                                        </div>
-                                        <div className="overflow-hidden">
-                                            <h4 className="font-black text-base leading-tight truncate uppercase">{card.companyName}</h4>
-                                            <p className="text-xs font-bold text-gray-400">{formatCurrency(card.totalValue)} / mês</p>
-                                        </div>
-                                    </div>
-
-                                    <div className="space-y-2.5">
-                                        {card.partners.map(p => (
-                                            <div key={p.id} className="flex justify-between items-center p-2.5 bg-gray-50 rounded-lg border border-gray-100">
-                                                <div className="flex items-center gap-2">
-                                                    <div className="w-5 h-5 rounded-full bg-black text-white text-[9px] font-bold flex items-center justify-center shrink-0">
-                                                        {p.name.charAt(0).toUpperCase()}
-                                                    </div>
-                                                    <span className="font-bold text-xs text-gray-700 truncate uppercase">{p.name}</span>
+                                        {/* Card Header (Always Visible) */}
+                                        <div className="flex items-center gap-4 mb-3 cursor-pointer" onClick={() => toggleCard(card.id)}>
+                                            <div className="w-12 h-12 bg-gray-50 rounded-xl flex items-center justify-center text-gray-700 border border-gray-100 relative shrink-0">
+                                                <Building2 size={20} strokeWidth={1.5} />
+                                                {/* Due Day Badge */}
+                                                <div className="absolute -bottom-1.5 -right-1.5 bg-black text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full border-2 border-white">
+                                                    Dia {card.dueDay}
                                                 </div>
-                                                <span className="font-black text-xs text-black whitespace-nowrap">{formatCurrency(p.value)}</span>
                                             </div>
-                                        ))}
+                                            <div className="overflow-hidden flex-1">
+                                                <h4 className="font-black text-base leading-tight truncate uppercase">{card.companyName}</h4>
+                                                <p className="text-xs font-bold text-gray-400">{formatCurrency(card.totalValue)} / mês</p>
+                                            </div>
+                                            <div className="mr-8 text-gray-400">
+                                                 {isExpanded ? <ChevronUp size={20}/> : <ChevronDown size={20}/>}
+                                            </div>
+                                        </div>
+
+                                        {/* Collapsible Content */}
+                                        {isExpanded && (
+                                            <div className="space-y-2.5 animate-in slide-in-from-top-2 duration-200 mt-5">
+                                                <div className="h-px bg-gray-100 mb-3"></div>
+                                                {card.partners.map(p => (
+                                                    <div key={p.id} className="flex justify-between items-center p-2.5 bg-gray-50 rounded-lg border border-gray-100">
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="w-5 h-5 rounded-full bg-black text-white text-[9px] font-bold flex items-center justify-center shrink-0">
+                                                                {p.name.charAt(0).toUpperCase()}
+                                                            </div>
+                                                            <span className="font-bold text-xs text-gray-700 truncate uppercase">{p.name}</span>
+                                                        </div>
+                                                        <span className="font-black text-xs text-black whitespace-nowrap">{formatCurrency(p.value)}</span>
+                                                    </div>
+                                                ))}
+                                                
+                                                <div className="mt-3 pt-3 border-t border-gray-100 flex justify-between items-center">
+                                                    <span className="text-[9px] font-bold text-gray-400 uppercase">Rateio Total</span>
+                                                    <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100">100% Distribuído</span>
+                                                </div>
+                                            </div>
+                                        )}
+                                        
+                                        {!isExpanded && (
+                                            <div className="mt-2 text-[10px] font-bold text-gray-400 uppercase tracking-wide">
+                                                {card.partners.length} Sócios Envolvidos
+                                            </div>
+                                        )}
                                     </div>
-                                    
-                                    <div className="mt-3 pt-3 border-t border-gray-100 flex justify-between items-center">
-                                        <span className="text-[9px] font-bold text-gray-400 uppercase">Rateio Total</span>
-                                        <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100">100% Distribuído</span>
-                                    </div>
-                                </div>
-                            ))
+                                );
+                            })
                         )}
                     </div>
                 </div>

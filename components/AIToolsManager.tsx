@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Bot, Plus, Trash2, Calendar, DollarSign, Loader2, User, Layers, Briefcase, Building2 } from 'lucide-react';
+import { Bot, Plus, Trash2, Calendar, DollarSign, Loader2, User, Layers, Briefcase, Building2, Search } from 'lucide-react';
 import { formatCurrency, formatCurrencyInput, parseCurrencyInput } from '../services/utils';
 import { useFirestoreCollection } from '../hooks/useFirestore';
 import { CpuArchitecture } from './ui/cpu-architecture';
@@ -23,6 +23,9 @@ export const AIToolsManager: React.FC = () => {
     const [newDate, setNewDate] = useState('');
     const [newOwner, setNewOwner] = useState<'CARRYON' | 'SPENCER' | 'JOI.A.'>('CARRYON');
     const [linkedProjectId, setLinkedProjectId] = useState('');
+    
+    // Search State
+    const [searchTerm, setSearchTerm] = useState('');
 
     const handleAdd = async () => {
         if (!newName || !newValue || !newDate) return;
@@ -83,6 +86,21 @@ export const AIToolsManager: React.FC = () => {
         ...tools.map(t => ({ ...t, type: 'TOOL' as const })),
         ...platforms.map(p => ({ ...p, type: 'PLATFORM' as const }))
     ].sort((a, b) => b.value - a.value);
+
+    // Filtered List based on Search
+    const filteredList = combinedList.filter(item => {
+        const linkedProjectName = item.linkedProjectId 
+            ? projects.find(p => p.id === item.linkedProjectId)?.nome 
+            : '';
+        
+        const searchLower = searchTerm.toLowerCase();
+        
+        return (
+            item.name.toLowerCase().includes(searchLower) ||
+            (item.owner && item.owner.toLowerCase().includes(searchLower)) ||
+            (linkedProjectName && linkedProjectName.toLowerCase().includes(searchLower))
+        );
+    });
 
     const totalCost = combinedList.reduce((acc, curr) => acc + curr.value, 0);
 
@@ -233,11 +251,25 @@ export const AIToolsManager: React.FC = () => {
 
                     {/* Tools List */}
                     <div className="bg-white rounded-2xl shadow-apple border border-gray-200 overflow-hidden">
-                        <div className="p-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
-                            <h3 className="font-black text-black text-sm">Lista Unificada</h3>
-                            <div className="flex gap-2">
-                                <span className="text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded font-bold">TOOLS</span>
-                                <span className="text-[10px] bg-orange-50 text-orange-600 px-2 py-0.5 rounded font-bold">CONTAS</span>
+                        <div className="p-4 border-b border-gray-200 bg-gray-50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                            <div className="flex items-center justify-between w-full sm:w-auto gap-4">
+                                <h3 className="font-black text-black text-sm">Lista Unificada</h3>
+                                <div className="flex gap-2">
+                                    <span className="text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded font-bold">TOOLS</span>
+                                    <span className="text-[10px] bg-orange-50 text-orange-600 px-2 py-0.5 rounded font-bold">CONTAS</span>
+                                </div>
+                            </div>
+                            
+                            {/* Search */}
+                            <div className="relative w-full sm:w-64">
+                                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                <input 
+                                    type="text" 
+                                    placeholder="BUSCAR..." 
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="w-full bg-white border border-gray-200 rounded-lg pl-9 pr-3 py-2 text-xs font-bold uppercase focus:ring-2 focus:ring-black focus:outline-none placeholder:normal-case"
+                                />
                             </div>
                         </div>
                         <div className="divide-y divide-gray-100 min-h-[80px]">
@@ -245,10 +277,10 @@ export const AIToolsManager: React.FC = () => {
                                 <div className="p-6 flex items-center justify-center text-gray-400">
                                     <Loader2 size={20} className="animate-spin mr-2"/> Carregando...
                                 </div>
-                            ) : combinedList.length === 0 ? (
-                                <div className="p-6 text-center text-gray-400 font-medium text-sm">Nenhum custo cadastrado.</div>
+                            ) : filteredList.length === 0 ? (
+                                <div className="p-6 text-center text-gray-400 font-medium text-sm">Nenhum custo encontrado.</div>
                             ) : (
-                                combinedList.map(item => {
+                                filteredList.map(item => {
                                     // Resolve Linked Project Name
                                     const linkedProjectName = item.linkedProjectId 
                                         ? projects.find(p => p.id === item.linkedProjectId)?.nome 
