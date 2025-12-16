@@ -50,15 +50,17 @@ export interface AITool extends BaseEntity {
     dueDate: number;
     renovationCycle: 'MONTHLY' | 'YEARLY';
     owner?: 'CARRYON' | 'SPENCER' | 'JOI.A.';
+    linkedProjectId?: string; // Optional link to a project
 }
 
 // --- 4. PLATFORMS DOMAIN ---
 export interface Platform extends BaseEntity {
     name: string;
-    client: string; // Associated Client/Project Name
+    client: string; // Legacy field, now preferred linkedProjectId
     value: number;
     dueDate: number;
     owner?: 'CARRYON' | 'SPENCER' | 'JOI.A.';
+    linkedProjectId?: string; // Optional link to a project
 }
 
 // --- 5. NOTIFICATIONS & ALERTS ---

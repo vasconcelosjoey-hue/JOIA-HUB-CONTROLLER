@@ -32,7 +32,7 @@ export const Dashboard: React.FC = () => {
     try {
         const newProject: any = {
             nome: newName,
-            cnpj: newCNPJ || 'Não informado',
+            cnpj: newCNPJ || 'NÃO INFORMADO',
             status: 'EM TREINAMENTO',
             dataStart: newStartDate || new Date().toISOString(),
             diaMensalidade: 5,
@@ -203,7 +203,7 @@ export const Dashboard: React.FC = () => {
                           <div className="flex-1 space-y-3 w-full text-center sm:text-left">
                               <div className="space-y-1">
                                   <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Nome da Empresa</label>
-                                  <input type="text" value={editingProject.nome} onChange={e => setEditingProject({...editingProject, nome: e.target.value})} className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 font-black text-base focus:ring-2 focus:ring-black outline-none" />
+                                  <input type="text" value={editingProject.nome} onChange={e => setEditingProject({...editingProject, nome: e.target.value.toUpperCase()})} className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 font-black text-base focus:ring-2 focus:ring-black outline-none uppercase" />
                               </div>
                           </div>
                       </div>
@@ -213,12 +213,12 @@ export const Dashboard: React.FC = () => {
                                 <h4 className="text-xs font-black text-black uppercase border-b border-gray-200 pb-1.5">Dados Cadastrais</h4>
                                 <div className="space-y-1">
                                     <label className="text-[10px] font-bold text-gray-500 uppercase">CNPJ</label>
-                                    <input type="text" value={editingProject.cnpj} onChange={e => setEditingProject({...editingProject, cnpj: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 font-medium text-sm" />
+                                    <input type="text" value={editingProject.cnpj} onChange={e => setEditingProject({...editingProject, cnpj: e.target.value.toUpperCase()})} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 font-medium text-sm uppercase" />
                                 </div>
                                 <div className="space-y-1">
                                     <label className="text-[10px] font-bold text-gray-500 uppercase">Website</label>
                                     <div className="flex gap-2">
-                                        <input type="text" value={editingProject.website || ''} onChange={e => setEditingProject({...editingProject, website: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 font-medium text-sm" />
+                                        <input type="text" value={editingProject.website || ''} onChange={e => setEditingProject({...editingProject, website: e.target.value.toLowerCase()})} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 font-medium text-sm" />
                                         {editingProject.website && (
                                             <button onClick={() => openWebsite(editingProject.website)} className="bg-blue-50 text-blue-600 p-2 rounded-lg border border-blue-100 hover:bg-blue-100 transition-colors shrink-0">
                                                 <ExternalLink size={16} />
@@ -229,7 +229,7 @@ export const Dashboard: React.FC = () => {
                                 <div className="space-y-1">
                                     <label className="text-[10px] font-bold text-gray-500 uppercase flex items-center gap-1"><MapPin size={10}/> Endereço</label>
                                     <div className="flex gap-2">
-                                        <input type="text" value={editingProject.address || ''} onChange={e => setEditingProject({...editingProject, address: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 font-medium text-sm" placeholder="Rua, Número, Cidade" />
+                                        <input type="text" value={editingProject.address || ''} onChange={e => setEditingProject({...editingProject, address: e.target.value.toUpperCase()})} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 font-medium text-sm uppercase" placeholder="Rua, Número, Cidade" />
                                         {editingProject.address && (
                                             <button onClick={() => openGoogleMapsRoute(editingProject.address)} className="bg-green-50 text-green-600 p-2 rounded-lg border border-green-100 hover:bg-green-100 transition-colors shrink-0">
                                                 <Navigation size={16} />
@@ -243,12 +243,12 @@ export const Dashboard: React.FC = () => {
                                 <h4 className="text-xs font-black text-black uppercase border-b border-gray-200 pb-1.5">Contato & Financeiro</h4>
                                 <div className="space-y-1">
                                     <label className="text-[10px] font-bold text-gray-500 uppercase">Supervisor</label>
-                                    <input type="text" value={editingProject.supervisorName} onChange={e => setEditingProject({...editingProject, supervisorName: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 font-medium text-sm" />
+                                    <input type="text" value={editingProject.supervisorName} onChange={e => setEditingProject({...editingProject, supervisorName: e.target.value.toUpperCase()})} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 font-medium text-sm uppercase" />
                                 </div>
                                 <div className="space-y-1">
                                     <label className="text-[10px] font-bold text-gray-500 uppercase">Contato</label>
                                     <div className="flex gap-2">
-                                        <input type="text" value={editingProject.supervisorContact} onChange={e => setEditingProject({...editingProject, supervisorContact: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 font-medium text-sm" />
+                                        <input type="text" value={editingProject.supervisorContact} onChange={e => setEditingProject({...editingProject, supervisorContact: e.target.value.toUpperCase()})} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 font-medium text-sm uppercase" />
                                         {editingProject.supervisorContact && (
                                             <button onClick={() => openWhatsApp(editingProject.supervisorContact)} className="bg-emerald-50 text-emerald-600 p-2 rounded-lg border border-emerald-100 hover:bg-emerald-100 transition-colors shrink-0">
                                                 <MessageCircle size={16} />
@@ -297,7 +297,7 @@ export const Dashboard: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div className="space-y-1.5">
                     <label className="text-[10px] font-bold text-gray-500 uppercase">Nome da Empresa</label>
-                    <input type="text" value={newName} onChange={e => setNewName(e.target.value)} className="w-full bg-gray-50 border border-gray-300 rounded-lg px-3 py-2.5 text-black font-bold focus:ring-2 focus:ring-black outline-none transition-all text-sm" />
+                    <input type="text" value={newName} onChange={e => setNewName(e.target.value.toUpperCase())} className="w-full bg-gray-50 border border-gray-300 rounded-lg px-3 py-2.5 text-black font-bold focus:ring-2 focus:ring-black outline-none transition-all text-sm uppercase" />
                 </div>
                  <div className="md:col-span-2 lg:col-span-3 pt-2">
                     <button 
@@ -341,7 +341,7 @@ export const Dashboard: React.FC = () => {
                         </div>
                     </div>
                     <div>
-                        <h3 className="text-base font-black text-black leading-tight line-clamp-1 group-hover:text-gray-700 transition-colors">{project.nome}</h3>
+                        <h3 className="text-base font-black text-black leading-tight line-clamp-1 group-hover:text-gray-700 transition-colors uppercase">{project.nome}</h3>
                     </div>
                     <div className="mt-auto pt-2 border-t border-gray-100 flex justify-between items-center relative z-20">
                         <div>

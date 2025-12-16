@@ -3,17 +3,16 @@ import React, { useState } from 'react';
 import { Dashboard } from './components/Dashboard';
 import { MeetingCreator } from './components/MeetingCreator';
 import { AIToolsManager } from './components/AIToolsManager';
-import { PlatformManager } from './components/PlatformManager';
 import { PartnershipManager } from './components/PartnershipManager';
 import { BalanceManager } from './components/BalanceManager';
 import { NotificationCenter } from './components/NotificationCenter';
-import { LayoutGrid, CalendarPlus, Bot, Layers, CreditCard, Bell, PieChart } from 'lucide-react';
+import { LayoutGrid, CalendarPlus, Bot, CreditCard, Bell, PieChart } from 'lucide-react';
 import { useNotifications } from './hooks/useNotifications';
 import { useFirestoreDocument } from './hooks/useFirestore';
 import { GLOBAL_SETTINGS_ID } from './constants';
 
 // Define Views
-type View = 'dashboard' | 'meetings' | 'ai-tools' | 'platforms' | 'partnership' | 'balance';
+type View = 'dashboard' | 'meetings' | 'ai-tools' | 'partnership' | 'balance';
 
 function App() {
   const [isAlertsOpen, setIsAlertsOpen] = useState(false);
@@ -35,14 +34,17 @@ function App() {
       window.scrollTo(0,0);
   };
 
-  // Navigation Items
-  const navItems = [
+  // Primary Navigation Items (Top)
+  const mainNavItems = [
     { id: 'dashboard', label: 'Projetos', icon: LayoutGrid },
+    { id: 'ai-tools', label: 'Ferramentas & Custos', icon: Bot }, // Merged Tools + Platforms
+    { id: 'partnership', label: 'Parcerias', icon: CreditCard },
+  ];
+
+  // System/Management Navigation Items (Bottom)
+  const systemNavItems = [
     { id: 'balance', label: 'Balance', icon: PieChart },
     { id: 'meetings', label: 'Reuniões', icon: CalendarPlus },
-    { id: 'ai-tools', label: 'Tools IA', icon: Bot },
-    { id: 'platforms', label: 'Contas', icon: Layers },
-    { id: 'partnership', label: 'Parcerias', icon: CreditCard },
   ];
 
   const renderContent = () => {
@@ -50,15 +52,15 @@ function App() {
       case 'dashboard': return <Dashboard />;
       case 'balance': return <BalanceManager />;
       case 'meetings': return <MeetingCreator onBack={() => {}} />;
-      case 'ai-tools': return <AIToolsManager />;
-      case 'platforms': return <PlatformManager />;
+      case 'ai-tools': return <AIToolsManager />; // Handles both Tools & Platforms now
       case 'partnership': return <PartnershipManager onAddCard={() => {}} onDeleteCard={() => {}} cards={[]} />;
       default: return <Dashboard />;
     }
   };
 
   const getPageTitle = () => {
-      const item = navItems.find(i => i.id === currentView);
+      const allItems = [...mainNavItems, ...systemNavItems];
+      const item = allItems.find(i => i.id === currentView);
       return item ? item.label : 'Dashboard';
   }
 
@@ -74,9 +76,9 @@ function App() {
 
       {/* --- DESKTOP/TABLET SIDEBAR (Hidden on Mobile) --- */}
       <aside className="hidden md:flex w-60 bg-white border-r border-gray-200 flex-col justify-between shrink-0 z-20 transition-all">
-        <div>
+        <div className="flex flex-col h-full">
           {/* Logo Area */}
-          <div className="h-20 flex items-center justify-center px-4 border-b border-gray-100">
+          <div className="h-20 flex items-center justify-center px-4 border-b border-gray-100 shrink-0">
              <img 
                 src="/logo.png" 
                 alt="CarryOn Consultoria" 
@@ -90,10 +92,10 @@ function App() {
              <span className="hidden font-black text-xl tracking-tight text-black">CarryOn</span>
           </div>
 
-          <nav className="p-3 space-y-0.5">
-            <p className="px-3 text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 mt-2">Menu Principal</p>
+          <nav className="p-3 space-y-0.5 flex-1 overflow-y-auto custom-scrollbar">
+            <p className="px-3 text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 mt-2">Principal</p>
             
-            {navItems.map((item) => {
+            {mainNavItems.map((item) => {
               const Icon = item.icon;
               const isActive = currentView === item.id;
               return (
@@ -112,11 +114,34 @@ function App() {
               );
             })}
 
-            <p className="px-3 text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 mt-5">Sistema</p>
-            
+            <div className="my-4 border-t border-gray-100"></div>
+
+            <p className="px-3 text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Gestão</p>
+
+            {systemNavItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = currentView === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => setCurrentView(item.id as View)}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${
+                    isActive 
+                      ? 'bg-black text-white shadow-md' 
+                      : 'text-gray-500 hover:bg-gray-50 hover:text-black'
+                  }`}
+                >
+                  <Icon size={16} strokeWidth={isActive ? 2.5 : 2} />
+                  {item.label}
+                </button>
+              );
+            })}
+          </nav>
+
+          <div className="p-3 border-t border-gray-100 shrink-0">
             <button
                 onClick={() => setIsAlertsOpen(true)}
-                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-semibold text-gray-500 hover:bg-gray-50 hover:text-black transition-all"
+                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-semibold text-gray-500 hover:bg-gray-50 hover:text-black transition-all mb-1"
             >
                 <div className="relative">
                   <Bell size={16} strokeWidth={2} />
@@ -131,19 +156,7 @@ function App() {
                     </span>
                 )}
             </button>
-          </nav>
-        </div>
-
-        <div className="p-3 border-t border-gray-100">
-           <div className="bg-gray-50 rounded-lg p-3 flex items-center gap-2.5 border border-gray-100">
-              <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 font-bold text-[10px] border border-white shadow-sm">
-                AD
-              </div>
-              <div className="overflow-hidden">
-                <p className="text-xs font-bold text-black truncate">Admin User</p>
-                <p className="text-[10px] text-gray-400 font-medium truncate">Workspace Ativo</p>
-              </div>
-           </div>
+          </div>
         </div>
       </aside>
 
@@ -178,14 +191,14 @@ function App() {
             </h1>
           </div>
           <div className="flex items-center gap-4">
-             {/* Desktop specific header actions if needed */}
+             {/* Header Actions */}
           </div>
         </header>
 
         {/* --- CONTENT AREA --- */}
-        <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-6 custom-scrollbar pb-20 md:pb-8">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-6 custom-scrollbar pb-24 md:pb-8">
           <div className="max-w-6xl mx-auto">
-             {/* Mobile Page Title (since desktop header is hidden on mobile) */}
+             {/* Mobile Page Title */}
              <div className="md:hidden mb-4 mt-1">
                 <h1 className="text-xl font-bold text-black tracking-tight">{getPageTitle()}</h1>
              </div>
@@ -194,10 +207,13 @@ function App() {
         </main>
 
         {/* --- MOBILE BOTTOM NAVIGATION (Visible only on Mobile) --- */}
-        <nav className="md:hidden fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 z-30 flex justify-around items-center px-2 py-2 pb-5 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
-            {navItems.map((item) => {
+        <nav className="md:hidden fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 z-30 flex justify-around items-center px-1 py-2 pb-5 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+            {[...mainNavItems, ...systemNavItems].map((item) => {
               const Icon = item.icon;
               const isActive = currentView === item.id;
+              // Limit mobile nav items if too many
+              if (item.id === 'partnership') return null; // Hide Partnership on mobile bar to fit 4 items nicely if needed, or keep all. Let's keep 4 main ones.
+
               return (
                 <button
                   key={item.id}

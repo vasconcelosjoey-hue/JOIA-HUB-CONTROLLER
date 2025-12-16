@@ -1,44 +1,63 @@
 
 import React, { useState } from 'react';
-import { Bot, Plus, Trash2, Calendar, DollarSign, Loader2, User } from 'lucide-react';
+import { Bot, Plus, Trash2, Calendar, DollarSign, Loader2, User, Layers, Briefcase, Building2 } from 'lucide-react';
 import { formatCurrency, formatCurrencyInput, parseCurrencyInput } from '../services/utils';
 import { useFirestoreCollection } from '../hooks/useFirestore';
 import { CpuArchitecture } from './ui/cpu-architecture';
-
-interface Tool {
-    id: string;
-    name: string;
-    value: number;
-    dueDate: number;
-    owner?: 'CARRYON' | 'SPENCER' | 'JOI.A.';
-}
+import { Project, AITool, Platform } from '../types';
 
 export const AIToolsManager: React.FC = () => {
-    // Switch to Firestore
-    const { data: tools, loading, addItem, deleteItem } = useFirestoreCollection<Tool>('ai_tools');
+    // 1. Fetch ALL Data needed
+    const { data: tools, loading: loadingTools, addItem: addTool, deleteItem: deleteTool } = useFirestoreCollection<AITool>('ai_tools');
+    const { data: platforms, loading: loadingPlatforms, addItem: addPlatform, deleteItem: deletePlatform } = useFirestoreCollection<Platform>('platforms');
+    const { data: projects } = useFirestoreCollection<Project>('projects');
     
+    const loading = loadingTools || loadingPlatforms;
+
+    // 2. Form State
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [itemType, setItemType] = useState<'TOOL' | 'PLATFORM'>('TOOL'); // Toggle between Tool and Platform
+    
     const [newName, setNewName] = useState('');
     const [newValue, setNewValue] = useState(''); // String for smart format
     const [newDate, setNewDate] = useState('');
-    const [newOwner, setNewOwner] = useState<Tool['owner']>('CARRYON');
+    const [newOwner, setNewOwner] = useState<'CARRYON' | 'SPENCER' | 'JOI.A.'>('CARRYON');
+    const [linkedProjectId, setLinkedProjectId] = useState('');
 
     const handleAdd = async () => {
         if (!newName || !newValue || !newDate) return;
         setIsSubmitting(true);
         try {
-            // Remove 'id' to allow Firestore to generate it
-            const newTool: Omit<Tool, 'id'> = {
-                name: newName,
-                value: parseCurrencyInput(newValue),
-                dueDate: parseInt(newDate),
-                owner: newOwner
-            };
-            await addItem(newTool);
+            if (itemType === 'TOOL') {
+                const newTool: Omit<AITool, 'id'> = {
+                    name: newName,
+                    value: parseCurrencyInput(newValue),
+                    dueDate: parseInt(newDate),
+                    renovationCycle: 'MONTHLY',
+                    owner: newOwner,
+                    linkedProjectId: linkedProjectId || undefined,
+                    createdAt: new Date().toISOString()
+                };
+                await addTool(newTool);
+            } else {
+                const newPlat: Omit<Platform, 'id'> = {
+                    name: newName,
+                    client: linkedProjectId ? (projects.find(p => p.id === linkedProjectId)?.nome || '') : 'AVULSO',
+                    value: parseCurrencyInput(newValue),
+                    dueDate: parseInt(newDate),
+                    owner: newOwner,
+                    linkedProjectId: linkedProjectId || undefined,
+                    createdAt: new Date().toISOString()
+                };
+                await addPlatform(newPlat);
+            }
+            
+            // Reset
             setNewName('');
             setNewValue('');
             setNewDate('');
             setNewOwner('CARRYON');
+            setLinkedProjectId('');
         } catch(err) {
             console.error(err);
         } finally {
@@ -46,9 +65,10 @@ export const AIToolsManager: React.FC = () => {
         }
     };
 
-    const handleDelete = async (id: string) => {
-        if (window.confirm('Tem certeza que deseja remover esta ferramenta?')) {
-            await deleteItem(id);
+    const handleDelete = async (id: string, type: 'TOOL' | 'PLATFORM') => {
+        if (window.confirm('Tem certeza que deseja remover este item?')) {
+            if (type === 'TOOL') await deleteTool(id);
+            else await deletePlatform(id);
         }
     };
 
@@ -58,38 +78,79 @@ export const AIToolsManager: React.FC = () => {
         }
     };
 
-    const totalCost = tools.reduce((acc, curr) => acc + curr.value, 0);
+    // Unified List for Display
+    const combinedList = [
+        ...tools.map(t => ({ ...t, type: 'TOOL' as const })),
+        ...platforms.map(p => ({ ...p, type: 'PLATFORM' as const }))
+    ].sort((a, b) => b.value - a.value);
+
+    const totalCost = combinedList.reduce((acc, curr) => acc + curr.value, 0);
 
     return (
         <div className="space-y-6 animate-in slide-in-from-right duration-500">
              <div className="relative overflow-hidden text-center md:text-left">
                 {/* Visual Integration of CPU Architecture */}
                 <div className="absolute right-0 top-1/2 -translate-y-1/2 w-[250px] h-[120px] opacity-10 pointer-events-none hidden md:block">
-                    <CpuArchitecture text="AI CORE" />
+                    <CpuArchitecture text="CORE" />
                 </div>
                 
                 <h2 className="text-2xl md:text-3xl font-black text-black tracking-tight flex items-center justify-center md:justify-start gap-2 relative z-10">
                     <Bot className="w-6 h-6 md:w-8 md:h-8" strokeWidth={2.5} />
-                    Ferramentas IA
+                    Ferramentas & Custos
                 </h2>
-                <p className="text-gray-600 font-medium mt-0.5 text-sm md:text-base relative z-10">Gerenciamento de assinaturas e custos operacionais.</p>
+                <p className="text-gray-600 font-medium mt-0.5 text-sm md:text-base relative z-10">Central de assinaturas, ferramentas e mensalidades.</p>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Input Form */}
                 <div className="bg-white rounded-2xl p-5 shadow-apple border border-gray-200 h-fit" onKeyDown={handleKeyDown}>
-                    <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-4 border-b border-gray-100 pb-2">Nova Ferramenta</h3>
+                    <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-4 border-b border-gray-100 pb-2">Nova Despesa</h3>
+                    
+                    {/* Type Toggle */}
+                    <div className="flex p-1 bg-gray-100 rounded-lg mb-4">
+                        <button 
+                            onClick={() => setItemType('TOOL')}
+                            className={`flex-1 py-1.5 text-[10px] font-bold uppercase rounded-md transition-all ${itemType === 'TOOL' ? 'bg-white shadow-sm text-black' : 'text-gray-400 hover:text-gray-600'}`}
+                        >
+                            Ferramenta IA
+                        </button>
+                        <button 
+                            onClick={() => setItemType('PLATFORM')}
+                            className={`flex-1 py-1.5 text-[10px] font-bold uppercase rounded-md transition-all ${itemType === 'PLATFORM' ? 'bg-white shadow-sm text-black' : 'text-gray-400 hover:text-gray-600'}`}
+                        >
+                            Plataforma Cliente
+                        </button>
+                    </div>
+
                     <div className="space-y-3">
                         <div className="space-y-1">
-                            <label className="text-[10px] font-bold text-gray-500 uppercase">Nome da Ferramenta</label>
+                            <label className="text-[10px] font-bold text-gray-500 uppercase">Nome da Ferramenta/Plataforma</label>
                             <input 
                                 type="text" 
                                 value={newName}
-                                onChange={e => setNewName(e.target.value)}
-                                placeholder="Ex: ChatGPT Plus"
-                                className="w-full bg-gray-50 border border-gray-300 rounded-lg px-3 py-2.5 text-black font-bold focus:ring-2 focus:ring-black focus:outline-none transition-all text-sm"
+                                onChange={e => setNewName(e.target.value.toUpperCase())}
+                                placeholder={itemType === 'TOOL' ? "Ex: CHATGPT PLUS" : "Ex: SHOPIFY"}
+                                className="w-full bg-gray-50 border border-gray-300 rounded-lg px-3 py-2.5 text-black font-bold focus:ring-2 focus:ring-black focus:outline-none transition-all text-sm uppercase"
                             />
                         </div>
+
+                        {/* Project Link Dropdown */}
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-gray-500 uppercase flex items-center gap-1">
+                                <Briefcase size={10} /> Vincular Projeto (Opcional)
+                            </label>
+                            <select 
+                                value={linkedProjectId} 
+                                onChange={(e) => setLinkedProjectId(e.target.value)}
+                                className="w-full bg-gray-50 border border-gray-300 rounded-lg px-3 py-2.5 text-black font-bold focus:ring-2 focus:ring-black focus:outline-none transition-all text-sm appearance-none uppercase"
+                            >
+                                <option value="">-- SEM VÍNCULO --</option>
+                                {projects.map(p => (
+                                    <option key={p.id} value={p.id}>{p.nome}</option>
+                                ))}
+                            </select>
+                        </div>
+
                         <div className="grid grid-cols-2 gap-3">
                             <div className="space-y-1">
                                 <label className="text-[10px] font-bold text-gray-500 uppercase">Valor (R$)</label>
@@ -130,7 +191,7 @@ export const AIToolsManager: React.FC = () => {
                             <select 
                                 value={newOwner} 
                                 onChange={(e) => setNewOwner(e.target.value as any)}
-                                className="w-full bg-gray-50 border border-gray-300 rounded-lg px-3 py-2.5 text-black font-bold focus:ring-2 focus:ring-black focus:outline-none transition-all text-sm appearance-none"
+                                className="w-full bg-gray-50 border border-gray-300 rounded-lg px-3 py-2.5 text-black font-bold focus:ring-2 focus:ring-black focus:outline-none transition-all text-sm appearance-none uppercase"
                             >
                                 <option value="CARRYON">CARRYON</option>
                                 <option value="SPENCER">SPENCER</option>
@@ -159,8 +220,8 @@ export const AIToolsManager: React.FC = () => {
                         </div>
                         <div className="relative z-10 flex items-center gap-4">
                             <div className="text-right hidden md:block">
-                                <p className="font-bold text-base">{loading ? '...' : tools.length} Ferramentas</p>
-                                <p className="text-gray-400 text-xs">Ativas</p>
+                                <p className="font-bold text-base">{loading ? '...' : combinedList.length} Itens</p>
+                                <p className="text-gray-400 text-xs">Ativos</p>
                             </div>
                             <div className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center backdrop-blur-sm">
                                 <DollarSign size={24} />
@@ -172,48 +233,69 @@ export const AIToolsManager: React.FC = () => {
 
                     {/* Tools List */}
                     <div className="bg-white rounded-2xl shadow-apple border border-gray-200 overflow-hidden">
-                        <div className="p-4 border-b border-gray-200 bg-gray-50">
-                            <h3 className="font-black text-black text-sm">Ferramentas Ativas</h3>
+                        <div className="p-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
+                            <h3 className="font-black text-black text-sm">Lista Unificada</h3>
+                            <div className="flex gap-2">
+                                <span className="text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded font-bold">TOOLS</span>
+                                <span className="text-[10px] bg-orange-50 text-orange-600 px-2 py-0.5 rounded font-bold">CONTAS</span>
+                            </div>
                         </div>
                         <div className="divide-y divide-gray-100 min-h-[80px]">
                             {loading ? (
                                 <div className="p-6 flex items-center justify-center text-gray-400">
                                     <Loader2 size={20} className="animate-spin mr-2"/> Carregando...
                                 </div>
-                            ) : tools.length === 0 ? (
-                                <div className="p-6 text-center text-gray-400 font-medium text-sm">Nenhuma ferramenta cadastrada.</div>
+                            ) : combinedList.length === 0 ? (
+                                <div className="p-6 text-center text-gray-400 font-medium text-sm">Nenhum custo cadastrado.</div>
                             ) : (
-                                tools.map(tool => (
-                                    <div key={tool.id} className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors group animate-in fade-in">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-9 h-9 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100 shrink-0">
-                                                <Bot size={18} />
-                                            </div>
-                                            <div>
-                                                <p className="font-bold text-black text-sm">{tool.name}</p>
-                                                <div className="flex items-center gap-2 text-[10px] font-semibold text-gray-500">
-                                                    <span className="flex items-center gap-1"><Calendar size={10} /> Dia {tool.dueDate}</span>
-                                                    {tool.owner && (
-                                                        <>
-                                                            <span className="w-0.5 h-0.5 rounded-full bg-gray-300"></span>
-                                                            <span className="flex items-center gap-1 uppercase text-[9px]"><User size={10} /> {tool.owner}</span>
-                                                        </>
-                                                    )}
+                                combinedList.map(item => {
+                                    // Resolve Linked Project Name
+                                    const linkedProjectName = item.linkedProjectId 
+                                        ? projects.find(p => p.id === item.linkedProjectId)?.nome 
+                                        : null;
+
+                                    return (
+                                        <div key={item.id} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between hover:bg-gray-50 transition-colors group animate-in fade-in gap-3">
+                                            <div className="flex items-center gap-3">
+                                                <div className={`w-9 h-9 rounded-full flex items-center justify-center border shrink-0 ${
+                                                    item.type === 'TOOL' 
+                                                    ? 'bg-blue-50 text-blue-600 border-blue-100' 
+                                                    : 'bg-orange-50 text-orange-600 border-orange-100'
+                                                }`}>
+                                                    {item.type === 'TOOL' ? <Bot size={18} /> : <Layers size={18} />}
+                                                </div>
+                                                <div>
+                                                    <p className="font-bold text-black text-sm uppercase">{item.name}</p>
+                                                    <div className="flex flex-wrap items-center gap-2 text-[10px] font-semibold text-gray-500 mt-0.5">
+                                                        <span className="flex items-center gap-1"><Calendar size={10} /> Dia {item.dueDate}</span>
+                                                        
+                                                        <span className="w-0.5 h-0.5 rounded-full bg-gray-300"></span>
+                                                        <span className="flex items-center gap-1 uppercase"><User size={10} /> {item.owner}</span>
+                                                        
+                                                        {linkedProjectName && (
+                                                            <>
+                                                                <span className="w-0.5 h-0.5 rounded-full bg-gray-300"></span>
+                                                                <span className="flex items-center gap-1 uppercase text-black bg-gray-200 px-1.5 py-0.5 rounded">
+                                                                    <Building2 size={8} /> {linkedProjectName}
+                                                                </span>
+                                                            </>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
+                                            <div className="flex items-center justify-between sm:justify-end gap-4 w-full sm:w-auto pl-12 sm:pl-0">
+                                                <p className="font-black text-base">{formatCurrency(item.value)}</p>
+                                                <button 
+                                                    onClick={() => handleDelete(item.id, item.type)}
+                                                    className="text-gray-300 hover:text-red-500 transition-colors p-1.5"
+                                                    title="Remover"
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </div>
                                         </div>
-                                        <div className="flex items-center gap-4">
-                                            <p className="font-black text-base">{formatCurrency(tool.value)}</p>
-                                            <button 
-                                                onClick={() => handleDelete(tool.id)}
-                                                className="text-gray-300 hover:text-red-500 transition-colors p-1.5"
-                                                title="Remover"
-                                            >
-                                                <Trash2 size={16} />
-                                            </button>
-                                        </div>
-                                    </div>
-                                ))
+                                    );
+                                })
                             )}
                         </div>
                     </div>

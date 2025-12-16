@@ -49,7 +49,7 @@ export const PartnershipManager: React.FC<PartnershipManagerProps> = () => {
             if (p.id === id) {
                 return { 
                     ...p, 
-                    [field]: field === 'value' ? (parseFloat(val) || 0) : val 
+                    [field]: field === 'value' ? (parseFloat(val) || 0) : val.toUpperCase()
                 };
             }
             return p;
@@ -136,9 +136,9 @@ export const PartnershipManager: React.FC<PartnershipManagerProps> = () => {
                                     <input 
                                         type="text" 
                                         value={companyName}
-                                        onChange={e => setCompanyName(e.target.value)}
+                                        onChange={e => setCompanyName(e.target.value.toUpperCase())}
                                         placeholder="Nome da Empresa"
-                                        className="w-full bg-gray-50 border border-gray-300 rounded-lg pl-9 pr-4 py-2.5 text-black font-bold focus:ring-2 focus:ring-black focus:outline-none transition-all text-sm"
+                                        className="w-full bg-gray-50 border border-gray-300 rounded-lg pl-9 pr-4 py-2.5 text-black font-bold focus:ring-2 focus:ring-black focus:outline-none transition-all text-sm uppercase"
                                     />
                                     <Building2 size={16} className="absolute left-3 top-3 text-gray-400" />
                                 </div>
@@ -205,7 +205,7 @@ export const PartnershipManager: React.FC<PartnershipManagerProps> = () => {
                                                 value={partner.name}
                                                 onChange={(e) => updatePartner(partner.id, 'name', e.target.value)}
                                                 placeholder="Nome do Sócio"
-                                                className="flex-1 bg-white border border-gray-200 rounded-lg px-2.5 py-2 text-xs font-bold focus:border-black outline-none"
+                                                className="flex-1 bg-white border border-gray-200 rounded-lg px-2.5 py-2 text-xs font-bold focus:border-black outline-none uppercase"
                                             />
                                             {/* Mobile Delete Button (Shows here for layout reasons) */}
                                              {partners.length > 1 && (
@@ -334,7 +334,7 @@ export const PartnershipManager: React.FC<PartnershipManagerProps> = () => {
                                             </div>
                                         </div>
                                         <div className="overflow-hidden">
-                                            <h4 className="font-black text-base leading-tight truncate">{card.companyName}</h4>
+                                            <h4 className="font-black text-base leading-tight truncate uppercase">{card.companyName}</h4>
                                             <p className="text-xs font-bold text-gray-400">{formatCurrency(card.totalValue)} / mês</p>
                                         </div>
                                     </div>
@@ -346,7 +346,7 @@ export const PartnershipManager: React.FC<PartnershipManagerProps> = () => {
                                                     <div className="w-5 h-5 rounded-full bg-black text-white text-[9px] font-bold flex items-center justify-center shrink-0">
                                                         {p.name.charAt(0).toUpperCase()}
                                                     </div>
-                                                    <span className="font-bold text-xs text-gray-700 truncate">{p.name}</span>
+                                                    <span className="font-bold text-xs text-gray-700 truncate uppercase">{p.name}</span>
                                                 </div>
                                                 <span className="font-black text-xs text-black whitespace-nowrap">{formatCurrency(p.value)}</span>
                                             </div>
