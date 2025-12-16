@@ -1,7 +1,7 @@
 
 import React, { useState, useRef } from 'react';
 import { Project } from '../types';
-import { formatCurrency, getStatusColor, extractDominantColor } from '../services/utils';
+import { formatCurrency, extractDominantColor } from '../services/utils';
 import { Briefcase, Building2, Plus, X, MapPin, Upload, Trash2, MessageCircle, ExternalLink, Check, Navigation, Loader2 } from 'lucide-react';
 import { useFirestoreCollection } from '../hooks/useFirestore';
 

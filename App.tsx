@@ -72,11 +72,19 @@ function App() {
       {/* --- DESKTOP/TABLET SIDEBAR (Hidden on Mobile) --- */}
       <aside className="hidden md:flex w-60 bg-white border-r border-gray-200 flex-col justify-between shrink-0 z-20 transition-all">
         <div>
-          <div className="h-14 flex items-center px-5 border-b border-gray-100">
-             <div className="w-7 h-7 bg-black rounded-lg flex items-center justify-center text-white font-black text-[10px] mr-2.5 shadow-sm">
-                H.
-             </div>
-             <span className="font-bold text-base tracking-tight text-black">HUB CarryOn</span>
+          {/* Logo Area */}
+          <div className="h-20 flex items-center justify-center px-4 border-b border-gray-100">
+             <img 
+                src="/logo.png" 
+                alt="CarryOn Consultoria" 
+                className="max-h-12 w-auto object-contain"
+                onError={(e) => {
+                    // Fallback to text if image is missing
+                    e.currentTarget.style.display = 'none';
+                    e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                }}
+             />
+             <span className="hidden font-black text-xl tracking-tight text-black">CarryOn</span>
           </div>
 
           <nav className="p-3 space-y-0.5">
@@ -140,12 +148,13 @@ function App() {
       <div className="flex-1 flex flex-col h-full overflow-hidden relative bg-[#F5F5F7]">
         
         {/* --- MOBILE TOP HEADER (Visible only on Mobile) --- */}
-        <header className="md:hidden h-14 bg-white/90 backdrop-blur-xl border-b border-gray-200 flex items-center justify-between px-4 shrink-0 z-10 sticky top-0">
-             <div className="flex items-center gap-2">
-                 <div className="w-7 h-7 bg-black rounded-lg flex items-center justify-center text-white font-black text-[10px] shadow-sm">
-                    H.
-                 </div>
-                 <span className="font-bold text-base tracking-tight text-black">HUB CarryOn</span>
+        <header className="md:hidden h-16 bg-white/90 backdrop-blur-xl border-b border-gray-200 flex items-center justify-between px-4 shrink-0 z-10 sticky top-0">
+             <div className="flex items-center">
+                 <img 
+                    src="/logo.png" 
+                    alt="CarryOn" 
+                    className="h-8 w-auto object-contain"
+                 />
              </div>
              <button
                 onClick={() => setIsAlertsOpen(true)}
@@ -159,7 +168,7 @@ function App() {
         </header>
 
         {/* --- DESKTOP HEADER (Hidden on Mobile) --- */}
-        <header className="hidden md:flex h-14 bg-white/80 backdrop-blur-xl border-b border-gray-200 items-center justify-between px-6 shrink-0 z-10 sticky top-0">
+        <header className="hidden md:flex h-20 bg-white/80 backdrop-blur-xl border-b border-gray-200 items-center justify-between px-6 shrink-0 z-10 sticky top-0">
           <div>
             <h1 className="text-xl font-bold text-black tracking-tight">
                {getPageTitle()}
