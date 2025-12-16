@@ -310,11 +310,6 @@ export const Dashboard: React.FC = () => {
                                 <Building2 size={20} style={{ color: project.brandColor || '#000' }} strokeWidth={2} />
                             )}
                         </div>
-                        {project.status !== 'EM FUNCIONAMENTO' && (
-                            <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-black border uppercase tracking-wide ${getStatusColor(project.status)}`}>
-                                {project.status.replace("EM ", "")}
-                            </span>
-                        )}
                     </div>
                     <div>
                         <h3 className="text-base font-black text-black leading-tight line-clamp-1 group-hover:text-gray-700 transition-colors">{project.nome}</h3>

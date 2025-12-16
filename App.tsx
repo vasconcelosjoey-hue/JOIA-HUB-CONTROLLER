@@ -76,7 +76,7 @@ function App() {
              <div className="w-7 h-7 bg-black rounded-lg flex items-center justify-center text-white font-black text-[10px] mr-2.5 shadow-sm">
                 H.
              </div>
-             <span className="font-bold text-base tracking-tight text-black">HUB Controller</span>
+             <span className="font-bold text-base tracking-tight text-black">HUB CarryOn</span>
           </div>
 
           <nav className="p-3 space-y-0.5">
@@ -145,7 +145,7 @@ function App() {
                  <div className="w-7 h-7 bg-black rounded-lg flex items-center justify-center text-white font-black text-[10px] shadow-sm">
                     H.
                  </div>
-                 <span className="font-bold text-base tracking-tight text-black">HUB Controller</span>
+                 <span className="font-bold text-base tracking-tight text-black">HUB CarryOn</span>
              </div>
              <button
                 onClick={() => setIsAlertsOpen(true)}

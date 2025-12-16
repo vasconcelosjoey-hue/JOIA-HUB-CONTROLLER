@@ -83,7 +83,7 @@ export const NeuralCore: React.FC<NeuralCoreProps> = ({ className }) => {
                 opacity="0.9"
                 style={{ fontFamily: 'Inter, sans-serif' }}
             >
-                CONTROLLER
+                CARRYON
             </text>
         </g>
 
