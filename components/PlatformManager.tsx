@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Layers, Plus, Trash2, Calendar, User, Search, Loader2 } from 'lucide-react';
-import { formatCurrency } from '../services/utils';
+import { formatCurrency, formatCurrencyInput, parseCurrencyInput } from '../services/utils';
 import { useFirestoreCollection } from '../hooks/useFirestore';
 
 interface Platform {
@@ -10,6 +10,7 @@ interface Platform {
     client: string;
     value: number;
     dueDate: number;
+    owner?: 'CARRYON' | 'SPENCER' | 'JOI.A.';
 }
 
 export const PlatformManager: React.FC = () => {
@@ -21,6 +22,7 @@ export const PlatformManager: React.FC = () => {
     const [newClient, setNewClient] = useState('');
     const [newValue, setNewValue] = useState('');
     const [newDate, setNewDate] = useState('');
+    const [newOwner, setNewOwner] = useState<Platform['owner']>('CARRYON');
     const [searchTerm, setSearchTerm] = useState('');
 
     const handleAdd = async () => {
@@ -31,14 +33,16 @@ export const PlatformManager: React.FC = () => {
             const newPlat: Omit<Platform, 'id'> = {
                 name: newName,
                 client: newClient,
-                value: parseFloat(newValue),
-                dueDate: parseInt(newDate)
+                value: parseCurrencyInput(newValue),
+                dueDate: parseInt(newDate),
+                owner: newOwner
             };
             await addItem(newPlat);
             setNewName('');
             setNewClient('');
             setNewValue('');
             setNewDate('');
+            setNewOwner('CARRYON');
         } catch(err) {
             console.error(err);
         } finally {
@@ -49,6 +53,12 @@ export const PlatformManager: React.FC = () => {
     const handleDelete = async (id: string) => {
         if (window.confirm('Tem certeza que deseja apagar este registro?')) {
             await deleteItem(id);
+        }
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' && newName && newClient && newValue && newDate) {
+            handleAdd();
         }
     };
 
@@ -71,7 +81,7 @@ export const PlatformManager: React.FC = () => {
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Input Form */}
-                <div className="bg-white rounded-2xl p-5 shadow-apple border border-gray-200 h-fit">
+                <div className="bg-white rounded-2xl p-5 shadow-apple border border-gray-200 h-fit" onKeyDown={handleKeyDown}>
                     <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-4 border-b border-gray-100 pb-2">Nova Mensalidade</h3>
                     <div className="space-y-3">
                         <div className="space-y-1">
@@ -99,9 +109,9 @@ export const PlatformManager: React.FC = () => {
                                 <label className="text-[10px] font-bold text-gray-500 uppercase">Valor (R$)</label>
                                 <div className="relative">
                                     <input 
-                                        type="number" 
+                                        type="text" 
                                         value={newValue}
-                                        onChange={e => setNewValue(e.target.value)}
+                                        onChange={e => setNewValue(formatCurrencyInput(e.target.value))}
                                         placeholder="0,00"
                                         className="w-full bg-gray-50 border border-gray-300 rounded-lg px-3 py-2.5 pl-7 text-black font-bold focus:ring-2 focus:ring-black focus:outline-none transition-all text-sm"
                                     />
@@ -128,6 +138,20 @@ export const PlatformManager: React.FC = () => {
                                 />
                             </div>
                         </div>
+                        
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-gray-500 uppercase">Responsável (Payer)</label>
+                            <select 
+                                value={newOwner} 
+                                onChange={(e) => setNewOwner(e.target.value as any)}
+                                className="w-full bg-gray-50 border border-gray-300 rounded-lg px-3 py-2.5 text-black font-bold focus:ring-2 focus:ring-black focus:outline-none transition-all text-sm appearance-none"
+                            >
+                                <option value="CARRYON">CARRYON</option>
+                                <option value="SPENCER">SPENCER</option>
+                                <option value="JOI.A.">JOI.A.</option>
+                            </select>
+                        </div>
+
                         <button 
                             onClick={handleAdd}
                             disabled={isSubmitting || !newName || !newClient || !newValue || !newDate}
@@ -187,6 +211,12 @@ export const PlatformManager: React.FC = () => {
                                                     <span className="flex items-center gap-1 font-semibold"><User size={10}/> {plat.client}</span>
                                                     <span className="w-0.5 h-0.5 rounded-full bg-gray-300"></span>
                                                     <span className="flex items-center gap-1"><Calendar size={10}/> Dia {plat.dueDate}</span>
+                                                    {plat.owner && (
+                                                        <>
+                                                            <span className="w-0.5 h-0.5 rounded-full bg-gray-300"></span>
+                                                            <span className="font-bold text-[9px] uppercase tracking-wide">{plat.owner}</span>
+                                                        </>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>

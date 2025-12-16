@@ -1,8 +1,32 @@
+
 export const formatCurrency = (value: number) => {
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
     currency: 'BRL',
   }).format(value);
+};
+
+// Formats a raw input string (e.g. "1234") into currency display (e.g. "R$ 12,34")
+export const formatCurrencyInput = (value: string): string => {
+    // Remove everything that is not a digit
+    const onlyDigits = value.replace(/\D/g, "");
+    
+    if (!onlyDigits) return "";
+
+    // Convert to float (cents)
+    const floatValue = parseInt(onlyDigits) / 100;
+
+    return new Intl.NumberFormat('pt-BR', {
+        style: 'currency',
+        currency: 'BRL',
+    }).format(floatValue);
+};
+
+// Parses a currency display string back to a number
+export const parseCurrencyInput = (value: string): number => {
+    const onlyDigits = value.replace(/\D/g, "");
+    if (!onlyDigits) return 0;
+    return parseInt(onlyDigits) / 100;
 };
 
 export const getStatusColor = (status: string) => {
@@ -64,6 +88,33 @@ export const isUpcoming = (day: number) => {
     // Deprecated in favor of getAlertLevel, but kept for compatibility if needed
     const level = getAlertLevel(day);
     return level !== null;
+};
+
+// Helper to compress images before saving to Firestore (Limit to 1MB logic)
+export const compressImage = (base64Str: string, maxWidth = 300, quality = 0.7): Promise<string> => {
+    return new Promise((resolve) => {
+        const img = new Image();
+        img.src = base64Str;
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            let width = img.width;
+            let height = img.height;
+
+            if (width > maxWidth) {
+                height = Math.round((height * maxWidth) / width);
+                width = maxWidth;
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return resolve(base64Str);
+
+            ctx.drawImage(img, 0, 0, width, height);
+            resolve(canvas.toDataURL('image/jpeg', quality));
+        };
+        img.onerror = () => resolve(base64Str);
+    });
 };
 
 // Function to extract dominant color from an image URL/Base64

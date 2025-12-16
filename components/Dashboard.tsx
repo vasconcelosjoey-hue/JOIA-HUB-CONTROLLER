@@ -1,7 +1,7 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Project } from '../types';
-import { formatCurrency, extractDominantColor } from '../services/utils';
+import { formatCurrency, extractDominantColor, compressImage, formatCurrencyInput, parseCurrencyInput } from '../services/utils';
 import { Briefcase, Building2, Plus, X, MapPin, Upload, Trash2, MessageCircle, ExternalLink, Check, Navigation, Loader2 } from 'lucide-react';
 import { useFirestoreCollection } from '../hooks/useFirestore';
 
@@ -21,7 +21,7 @@ export const Dashboard: React.FC = () => {
   const [newSupervisor, setNewSupervisor] = useState('');
   const [newContact, setNewContact] = useState('');
   const [newStartDate, setNewStartDate] = useState('');
-  const [newVal, setNewVal] = useState('');
+  const [newVal, setNewVal] = useState(''); // String controlled for smart formatting
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -38,7 +38,7 @@ export const Dashboard: React.FC = () => {
             diaMensalidade: 5,
             supervisorName: newSupervisor,
             supervisorContact: newContact,
-            valorContrato: parseFloat(newVal) || 0,
+            valorContrato: parseCurrencyInput(newVal),
             brandColor: '#000000',
             address: '',
             createdAt: new Date().toISOString()
@@ -89,10 +89,12 @@ export const Dashboard: React.FC = () => {
           const reader = new FileReader();
           reader.onloadend = async () => {
               const result = reader.result as string;
-              const autoColor = await extractDominantColor(result);
+              // Compress before setting state to avoid "Payload too large" error in Firestore
+              const compressed = await compressImage(result, 200, 0.7); 
+              const autoColor = await extractDominantColor(compressed);
               setEditingProject({
                   ...editingProject,
-                  logo: result,
+                  logo: compressed,
                   brandColor: autoColor 
               });
           };
@@ -117,6 +119,29 @@ export const Dashboard: React.FC = () => {
       const finalUrl = url.startsWith('http') ? url : `https://${url}`;
       window.open(finalUrl, '_blank');
   }
+
+  // Handle Enter Key in Edit Mode
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter') {
+          handleSaveEdit();
+      }
+  }
+
+  // Handle Enter Key in Add Mode
+  const handleAddKeyDown = (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter' && newName) {
+          handleAddProject();
+      }
+  }
+
+  // Local state for editing value string
+  const [editValStr, setEditValStr] = useState('');
+  useEffect(() => {
+      if (editingProject) {
+          // Initial format
+          setEditValStr(formatCurrency(editingProject.valorContrato).replace('R$', '').trim());
+      }
+  }, [editingProject?.id]);
 
   if (loading) {
       return (
@@ -158,7 +183,7 @@ export const Dashboard: React.FC = () => {
                       <button onClick={() => setEditingProject(null)} className="p-1.5 hover:bg-gray-100 rounded-full transition-colors"><X size={20} /></button>
                   </div>
                   
-                  <div className="p-4 md:p-6 space-y-6">
+                  <div className="p-4 md:p-6 space-y-6" onKeyDown={handleKeyDown}>
                       <div className="flex flex-col sm:flex-row gap-5 items-center p-4 bg-gray-50 rounded-2xl border border-gray-200">
                           <div 
                             className="w-20 h-20 md:w-24 md:h-24 rounded-xl bg-white border-2 border-dashed border-gray-300 flex items-center justify-center relative overflow-hidden group cursor-pointer shadow-sm hover:border-black transition-colors shrink-0"
@@ -235,9 +260,13 @@ export const Dashboard: React.FC = () => {
                                     <label className="text-[10px] font-bold text-gray-500 uppercase">Mensalidade</label>
                                     <div className="relative">
                                         <input 
-                                            type="number" 
-                                            value={editingProject.valorContrato} 
-                                            onChange={e => setEditingProject({...editingProject, valorContrato: parseFloat(e.target.value)})} 
+                                            type="text" 
+                                            value={editValStr}
+                                            onChange={e => {
+                                                const formatted = formatCurrencyInput(e.target.value);
+                                                setEditValStr(formatted);
+                                                setEditingProject({...editingProject, valorContrato: parseCurrencyInput(formatted)})
+                                            }}
                                             className="w-full bg-gray-50 border border-gray-200 rounded-lg pl-8 pr-4 py-2 font-black text-base focus:outline-none focus:border-black focus:ring-1 focus:ring-black" 
                                         />
                                         <span className="absolute left-3 top-2.5 text-gray-400 text-xs font-bold">R$</span>
@@ -263,7 +292,7 @@ export const Dashboard: React.FC = () => {
       )}
 
       {isAdding && (
-         <div className="bg-white rounded-2xl p-5 shadow-float border border-gray-200 animate-in slide-in-from-top-10 fade-in duration-500 mb-6">
+         <div className="bg-white rounded-2xl p-5 shadow-float border border-gray-200 animate-in slide-in-from-top-10 fade-in duration-500 mb-6" onKeyDown={handleAddKeyDown}>
             <h3 className="text-xs font-black text-gray-400 uppercase tracking-wider mb-4 border-b border-gray-100 pb-2">Novo Contrato</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div className="space-y-1.5">

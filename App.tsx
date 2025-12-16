@@ -5,14 +5,15 @@ import { MeetingCreator } from './components/MeetingCreator';
 import { AIToolsManager } from './components/AIToolsManager';
 import { PlatformManager } from './components/PlatformManager';
 import { PartnershipManager } from './components/PartnershipManager';
+import { BalanceManager } from './components/BalanceManager';
 import { NotificationCenter } from './components/NotificationCenter';
-import { LayoutGrid, CalendarPlus, Bot, Layers, CreditCard, Bell } from 'lucide-react';
+import { LayoutGrid, CalendarPlus, Bot, Layers, CreditCard, Bell, PieChart } from 'lucide-react';
 import { useNotifications } from './hooks/useNotifications';
 import { useFirestoreDocument } from './hooks/useFirestore';
 import { GLOBAL_SETTINGS_ID } from './constants';
 
 // Define Views
-type View = 'dashboard' | 'meetings' | 'ai-tools' | 'platforms' | 'partnership';
+type View = 'dashboard' | 'meetings' | 'ai-tools' | 'platforms' | 'partnership' | 'balance';
 
 function App() {
   const [isAlertsOpen, setIsAlertsOpen] = useState(false);
@@ -37,6 +38,7 @@ function App() {
   // Navigation Items
   const navItems = [
     { id: 'dashboard', label: 'Projetos', icon: LayoutGrid },
+    { id: 'balance', label: 'Balance', icon: PieChart },
     { id: 'meetings', label: 'Reuniões', icon: CalendarPlus },
     { id: 'ai-tools', label: 'Tools IA', icon: Bot },
     { id: 'platforms', label: 'Contas', icon: Layers },
@@ -46,6 +48,7 @@ function App() {
   const renderContent = () => {
     switch (currentView) {
       case 'dashboard': return <Dashboard />;
+      case 'balance': return <BalanceManager />;
       case 'meetings': return <MeetingCreator onBack={() => {}} />;
       case 'ai-tools': return <AIToolsManager />;
       case 'platforms': return <PlatformManager />;

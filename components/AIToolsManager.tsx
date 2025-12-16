@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
-import { Bot, Plus, Trash2, Calendar, DollarSign, Loader2 } from 'lucide-react';
-import { formatCurrency } from '../services/utils';
+import { Bot, Plus, Trash2, Calendar, DollarSign, Loader2, User } from 'lucide-react';
+import { formatCurrency, formatCurrencyInput, parseCurrencyInput } from '../services/utils';
 import { useFirestoreCollection } from '../hooks/useFirestore';
 import { CpuArchitecture } from './ui/cpu-architecture';
 
@@ -10,6 +10,7 @@ interface Tool {
     name: string;
     value: number;
     dueDate: number;
+    owner?: 'CARRYON' | 'SPENCER' | 'JOI.A.';
 }
 
 export const AIToolsManager: React.FC = () => {
@@ -18,8 +19,9 @@ export const AIToolsManager: React.FC = () => {
     
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [newName, setNewName] = useState('');
-    const [newValue, setNewValue] = useState('');
+    const [newValue, setNewValue] = useState(''); // String for smart format
     const [newDate, setNewDate] = useState('');
+    const [newOwner, setNewOwner] = useState<Tool['owner']>('CARRYON');
 
     const handleAdd = async () => {
         if (!newName || !newValue || !newDate) return;
@@ -28,13 +30,15 @@ export const AIToolsManager: React.FC = () => {
             // Remove 'id' to allow Firestore to generate it
             const newTool: Omit<Tool, 'id'> = {
                 name: newName,
-                value: parseFloat(newValue),
-                dueDate: parseInt(newDate)
+                value: parseCurrencyInput(newValue),
+                dueDate: parseInt(newDate),
+                owner: newOwner
             };
             await addItem(newTool);
             setNewName('');
             setNewValue('');
             setNewDate('');
+            setNewOwner('CARRYON');
         } catch(err) {
             console.error(err);
         } finally {
@@ -45,6 +49,12 @@ export const AIToolsManager: React.FC = () => {
     const handleDelete = async (id: string) => {
         if (window.confirm('Tem certeza que deseja remover esta ferramenta?')) {
             await deleteItem(id);
+        }
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' && newName && newValue && newDate) {
+            handleAdd();
         }
     };
 
@@ -67,7 +77,7 @@ export const AIToolsManager: React.FC = () => {
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Input Form */}
-                <div className="bg-white rounded-2xl p-5 shadow-apple border border-gray-200 h-fit">
+                <div className="bg-white rounded-2xl p-5 shadow-apple border border-gray-200 h-fit" onKeyDown={handleKeyDown}>
                     <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-4 border-b border-gray-100 pb-2">Nova Ferramenta</h3>
                     <div className="space-y-3">
                         <div className="space-y-1">
@@ -85,9 +95,9 @@ export const AIToolsManager: React.FC = () => {
                                 <label className="text-[10px] font-bold text-gray-500 uppercase">Valor (R$)</label>
                                 <div className="relative">
                                     <input 
-                                        type="number" 
+                                        type="text" 
                                         value={newValue}
-                                        onChange={e => setNewValue(e.target.value)}
+                                        onChange={e => setNewValue(formatCurrencyInput(e.target.value))}
                                         placeholder="0,00"
                                         className="w-full bg-gray-50 border border-gray-300 rounded-lg px-3 py-2.5 pl-7 text-black font-bold focus:ring-2 focus:ring-black focus:outline-none transition-all text-sm"
                                     />
@@ -114,6 +124,20 @@ export const AIToolsManager: React.FC = () => {
                                 />
                             </div>
                         </div>
+
+                         <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-gray-500 uppercase">Responsável (Payer)</label>
+                            <select 
+                                value={newOwner} 
+                                onChange={(e) => setNewOwner(e.target.value as any)}
+                                className="w-full bg-gray-50 border border-gray-300 rounded-lg px-3 py-2.5 text-black font-bold focus:ring-2 focus:ring-black focus:outline-none transition-all text-sm appearance-none"
+                            >
+                                <option value="CARRYON">CARRYON</option>
+                                <option value="SPENCER">SPENCER</option>
+                                <option value="JOI.A.">JOI.A.</option>
+                            </select>
+                        </div>
+
                         <button 
                             onClick={handleAdd}
                             disabled={isSubmitting || !newName || !newValue || !newDate}
@@ -162,13 +186,19 @@ export const AIToolsManager: React.FC = () => {
                                 tools.map(tool => (
                                     <div key={tool.id} className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors group animate-in fade-in">
                                         <div className="flex items-center gap-3">
-                                            <div className="w-9 h-9 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100">
+                                            <div className="w-9 h-9 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100 shrink-0">
                                                 <Bot size={18} />
                                             </div>
                                             <div>
                                                 <p className="font-bold text-black text-sm">{tool.name}</p>
-                                                <div className="flex items-center gap-1 text-[10px] font-semibold text-gray-500">
-                                                    <Calendar size={10} /> Dia {tool.dueDate}
+                                                <div className="flex items-center gap-2 text-[10px] font-semibold text-gray-500">
+                                                    <span className="flex items-center gap-1"><Calendar size={10} /> Dia {tool.dueDate}</span>
+                                                    {tool.owner && (
+                                                        <>
+                                                            <span className="w-0.5 h-0.5 rounded-full bg-gray-300"></span>
+                                                            <span className="flex items-center gap-1 uppercase text-[9px]"><User size={10} /> {tool.owner}</span>
+                                                        </>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>

@@ -49,6 +49,7 @@ export interface AITool extends BaseEntity {
     value: number;
     dueDate: number;
     renovationCycle: 'MONTHLY' | 'YEARLY';
+    owner?: 'CARRYON' | 'SPENCER' | 'JOI.A.';
 }
 
 // --- 4. PLATFORMS DOMAIN ---
@@ -57,6 +58,7 @@ export interface Platform extends BaseEntity {
     client: string; // Associated Client/Project Name
     value: number;
     dueDate: number;
+    owner?: 'CARRYON' | 'SPENCER' | 'JOI.A.';
 }
 
 // --- 5. NOTIFICATIONS & ALERTS ---
