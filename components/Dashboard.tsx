@@ -339,7 +339,8 @@ export const Dashboard: React.FC = () => {
          </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+      {/* Grid updated to xl:grid-cols-4 */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {filteredProjects.length === 0 ? (
             <div className="col-span-full py-10 flex flex-col items-center justify-center text-gray-400 border-2 border-dashed border-gray-200 rounded-2xl animate-in fade-in">
                 <Briefcase size={32} strokeWidth={1} className="mb-2 opacity-20"/>
@@ -350,35 +351,35 @@ export const Dashboard: React.FC = () => {
                 <div 
                     key={project.id} 
                     onClick={() => setEditingProject(project)}
-                    className="group bg-white rounded-2xl p-4 shadow-apple hover:shadow-float transition-all duration-300 border cursor-pointer relative overflow-hidden flex flex-col gap-3 animate-in fade-in active:scale-[0.98]"
+                    className="group bg-white rounded-xl p-3 shadow-apple hover:shadow-float transition-all duration-300 border cursor-pointer relative overflow-hidden flex flex-col gap-2.5 animate-in fade-in active:scale-[0.98]"
                     style={{ borderColor: project.brandColor ? `${project.brandColor}30` : '#e5e7eb' }}
                 >
                     <div className="absolute top-0 left-0 w-full h-1" style={{ backgroundColor: project.brandColor || '#000' }}></div>
                     <div className="flex justify-between items-start mt-1">
                         <div 
-                            className="w-12 h-12 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center p-1.5 overflow-hidden"
+                            className="w-10 h-10 rounded-lg bg-gray-50 border border-gray-100 flex items-center justify-center p-1 overflow-hidden"
                             style={{ boxShadow: `0 4px 10px -4px ${project.brandColor}30` }}
                         >
                             {project.logo ? (
                                 <img src={project.logo} alt={project.nome} className="w-full h-full object-contain" />
                             ) : (
-                                <Building2 size={20} style={{ color: project.brandColor || '#000' }} strokeWidth={2} />
+                                <Building2 size={18} style={{ color: project.brandColor || '#000' }} strokeWidth={2} />
                             )}
                         </div>
                     </div>
                     <div>
-                        <h3 className="text-base font-black text-black leading-tight line-clamp-1 group-hover:text-gray-700 transition-colors uppercase">{project.nome}</h3>
+                        <h3 className="text-sm font-black text-black leading-tight line-clamp-1 group-hover:text-gray-700 transition-colors uppercase">{project.nome}</h3>
                     </div>
                     <div className="mt-auto pt-2 border-t border-gray-100 flex justify-between items-center relative z-20">
                         <div>
-                            <p className="text-[9px] font-bold text-gray-400 uppercase">Mensal</p>
-                            <p className="text-sm font-black text-black">{formatCurrency(project.valorContrato || 0)}</p>
+                            <p className="text-[8px] font-bold text-gray-400 uppercase">Mensal</p>
+                            <p className="text-xs font-black text-black">{formatCurrency(project.valorContrato || 0)}</p>
                         </div>
                         <button 
                             onClick={(e) => handleDeleteProject(project.id, e)}
-                            className="w-7 h-7 rounded-lg bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-colors flex items-center justify-center shadow-sm z-30"
+                            className="w-6 h-6 rounded-md bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-colors flex items-center justify-center shadow-sm z-30"
                         >
-                            <Trash2 size={12} />
+                            <Trash2 size={10} />
                         </button>
                     </div>
                 </div>

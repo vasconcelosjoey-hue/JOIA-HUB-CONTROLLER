@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Bot, Plus, Trash2, Calendar, DollarSign, Loader2, User, Layers, Briefcase, Building2, Search } from 'lucide-react';
+import { Bot, Plus, Trash2, Calendar, DollarSign, Loader2, User, Layers, Briefcase, Building2, Search, FileText } from 'lucide-react';
 import { formatCurrency, formatCurrencyInput, parseCurrencyInput } from '../services/utils';
 import { useFirestoreCollection } from '../hooks/useFirestore';
 import { CpuArchitecture } from './ui/cpu-architecture';
@@ -19,6 +19,7 @@ export const AIToolsManager: React.FC = () => {
     const [itemType, setItemType] = useState<'TOOL' | 'PLATFORM'>('TOOL'); // Toggle between Tool and Platform
     
     const [newName, setNewName] = useState('');
+    const [newDescription, setNewDescription] = useState(''); // Added Description State
     const [newValue, setNewValue] = useState(''); // String for smart format
     const [newDate, setNewDate] = useState('');
     const [newOwner, setNewOwner] = useState<'CARRYON' | 'SPENCER' | 'JOI.A.'>('CARRYON');
@@ -34,6 +35,7 @@ export const AIToolsManager: React.FC = () => {
             if (itemType === 'TOOL') {
                 const newTool: Omit<AITool, 'id'> = {
                     name: newName,
+                    description: newDescription,
                     value: parseCurrencyInput(newValue),
                     dueDate: parseInt(newDate),
                     renovationCycle: 'MONTHLY',
@@ -45,6 +47,7 @@ export const AIToolsManager: React.FC = () => {
             } else {
                 const newPlat: Omit<Platform, 'id'> = {
                     name: newName,
+                    description: newDescription,
                     client: linkedProjectId ? (projects.find(p => p.id === linkedProjectId)?.nome || '') : 'AVULSO',
                     value: parseCurrencyInput(newValue),
                     dueDate: parseInt(newDate),
@@ -57,6 +60,7 @@ export const AIToolsManager: React.FC = () => {
             
             // Reset
             setNewName('');
+            setNewDescription('');
             setNewValue('');
             setNewDate('');
             setNewOwner('CARRYON');
@@ -97,6 +101,7 @@ export const AIToolsManager: React.FC = () => {
         
         return (
             item.name.toLowerCase().includes(searchLower) ||
+            (item.description && item.description.toLowerCase().includes(searchLower)) ||
             (item.owner && item.owner.toLowerCase().includes(searchLower)) ||
             (linkedProjectName && linkedProjectName.toLowerCase().includes(searchLower))
         );
@@ -149,6 +154,18 @@ export const AIToolsManager: React.FC = () => {
                                 onChange={e => setNewName(e.target.value.toUpperCase())}
                                 placeholder={itemType === 'TOOL' ? "Ex: CHATGPT PLUS" : "Ex: SHOPIFY"}
                                 className="w-full bg-gray-50 border border-gray-300 rounded-lg px-3 py-2.5 text-black font-bold focus:ring-2 focus:ring-black focus:outline-none transition-all text-sm uppercase"
+                            />
+                        </div>
+
+                         {/* Description Input */}
+                         <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-gray-500 uppercase">Breve Descritivo (Detalhes)</label>
+                            <input 
+                                type="text" 
+                                value={newDescription}
+                                onChange={e => setNewDescription(e.target.value.toUpperCase())}
+                                placeholder="EX: PLANO TEAM P/ GERAÇÃO DE IMAGENS..."
+                                className="w-full bg-gray-50 border border-gray-300 rounded-lg px-3 py-2.5 text-black font-bold focus:ring-2 focus:ring-black focus:outline-none transition-all text-sm uppercase placeholder:text-gray-400"
                             />
                         </div>
 
@@ -298,6 +315,14 @@ export const AIToolsManager: React.FC = () => {
                                                 </div>
                                                 <div>
                                                     <p className="font-bold text-black text-sm uppercase">{item.name}</p>
+                                                    
+                                                    {/* Display Description if exists */}
+                                                    {item.description && (
+                                                        <div className="flex items-center gap-1 text-[10px] text-gray-400 font-medium mt-0.5 max-w-[200px] md:max-w-xs truncate uppercase">
+                                                            <FileText size={10} className="shrink-0"/> {item.description}
+                                                        </div>
+                                                    )}
+
                                                     <div className="flex flex-wrap items-center gap-2 text-[10px] font-semibold text-gray-500 mt-0.5">
                                                         <span className="flex items-center gap-1"><Calendar size={10} /> Dia {item.dueDate}</span>
                                                         
