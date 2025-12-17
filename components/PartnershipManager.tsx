@@ -4,6 +4,7 @@ import { Users, Plus, Trash2, Calculator, AlertTriangle, CheckCircle2, DollarSig
 import { formatCurrency } from '../services/utils';
 import { Partner, PartnershipCard } from '../types';
 import { useFirestoreCollection } from '../hooks/useFirestore';
+import { useToast } from '../context/ToastContext';
 
 interface PartnershipManagerProps {
     cards: PartnershipCard[]; // Keep for compatibility if needed, but we'll use the hook internally
@@ -15,6 +16,7 @@ interface PartnershipManagerProps {
 export const PartnershipManager: React.FC<PartnershipManagerProps> = () => {
     // Switch to Firestore
     const { data: cards, loading, addItem, deleteItem } = useFirestoreCollection<PartnershipCard>('partnerships');
+    const { addToast } = useToast();
 
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
@@ -91,7 +93,16 @@ export const PartnershipManager: React.FC<PartnershipManagerProps> = () => {
     };
 
     const handleSaveCard = async () => {
-        if (!companyName || numericTotal <= 0 || !isBalanced || !dueDay) return;
+        if (!companyName || numericTotal <= 0 || !dueDay) {
+             addToast('Preencha todos os campos obrigatórios (Empresa, Valor, Data).', 'warning');
+             return;
+        }
+
+        if (!isBalanced) {
+             addToast('O valor distribuído não fecha com o total. Verifique o rateio.', 'warning');
+             return;
+        }
+
         setIsSubmitting(true);
         try {
             // Remove 'id' to let Firestore generate it
@@ -103,6 +114,7 @@ export const PartnershipManager: React.FC<PartnershipManagerProps> = () => {
             };
 
             await addItem(newCard);
+            addToast('Parceria registrada com sucesso!', 'success');
             
             // Reset Form
             setCompanyName('');
@@ -111,6 +123,7 @@ export const PartnershipManager: React.FC<PartnershipManagerProps> = () => {
             setPartners([{ id: generateId(), name: '', value: 0 }]);
         } catch(err) {
             console.error(err);
+            addToast('Erro ao salvar registro.', 'error');
         } finally {
             setIsSubmitting(false);
         }
@@ -120,6 +133,7 @@ export const PartnershipManager: React.FC<PartnershipManagerProps> = () => {
         e.stopPropagation();
         if (window.confirm('Tem certeza que deseja apagar este contrato de parceria?')) {
             await deleteItem(id);
+            addToast('Parceria removida.', 'info');
         }
     }
 
@@ -307,12 +321,7 @@ export const PartnershipManager: React.FC<PartnershipManagerProps> = () => {
                         {/* Action */}
                         <button 
                             onClick={handleSaveCard}
-                            disabled={isSubmitting || !isBalanced || !companyName || numericTotal <= 0 || !dueDay}
-                            className={`w-full py-3 rounded-lg font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 transition-all shadow-md ${
-                                isBalanced && companyName && numericTotal > 0 && dueDay
-                                ? 'bg-black text-white hover:bg-gray-800 hover:scale-[1.01]' 
-                                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                            }`}
+                            className="w-full bg-black text-white py-3 rounded-lg font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 transition-all shadow-md hover:bg-gray-800 disabled:opacity-50"
                         >
                             {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
                             {isSubmitting ? 'Salvando...' : 'Criar Card de Parceria'}

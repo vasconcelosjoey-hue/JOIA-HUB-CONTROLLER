@@ -5,12 +5,14 @@ import { formatCurrency, formatCurrencyInput, parseCurrencyInput } from '../serv
 import { useFirestoreCollection } from '../hooks/useFirestore';
 import { CpuArchitecture } from './ui/cpu-architecture';
 import { Project, AITool, Platform } from '../types';
+import { useToast } from '../context/ToastContext';
 
 export const AIToolsManager: React.FC = () => {
     // 1. Fetch ALL Data needed
     const { data: tools, loading: loadingTools, addItem: addTool, deleteItem: deleteTool } = useFirestoreCollection<AITool>('ai_tools');
     const { data: platforms, loading: loadingPlatforms, addItem: addPlatform, deleteItem: deletePlatform } = useFirestoreCollection<Platform>('platforms');
     const { data: projects } = useFirestoreCollection<Project>('projects');
+    const { addToast } = useToast();
     
     const loading = loadingTools || loadingPlatforms;
 
@@ -29,7 +31,10 @@ export const AIToolsManager: React.FC = () => {
     const [searchTerm, setSearchTerm] = useState('');
 
     const handleAdd = async () => {
-        if (!newName || !newValue || !newDate) return;
+        if (!newName || !newValue || !newDate) {
+            addToast('Preencha os campos obrigatórios: Nome, Valor e Data.', 'warning');
+            return;
+        }
         setIsSubmitting(true);
         try {
             if (itemType === 'TOOL') {
@@ -58,6 +63,8 @@ export const AIToolsManager: React.FC = () => {
                 await addPlatform(newPlat);
             }
             
+            addToast('Registro adicionado com sucesso!', 'success');
+            
             // Reset
             setNewName('');
             setNewDescription('');
@@ -67,6 +74,7 @@ export const AIToolsManager: React.FC = () => {
             setLinkedProjectId('');
         } catch(err) {
             console.error(err);
+            addToast('Erro ao salvar registro.', 'error');
         } finally {
             setIsSubmitting(false);
         }
@@ -76,11 +84,12 @@ export const AIToolsManager: React.FC = () => {
         if (window.confirm('Tem certeza que deseja remover este item?')) {
             if (type === 'TOOL') await deleteTool(id);
             else await deletePlatform(id);
+            addToast('Item removido.', 'info');
         }
     };
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
-        if (e.key === 'Enter' && newName && newValue && newDate) {
+        if (e.key === 'Enter') {
             handleAdd();
         }
     };
@@ -107,7 +116,8 @@ export const AIToolsManager: React.FC = () => {
         );
     });
 
-    const totalCost = combinedList.reduce((acc, curr) => acc + curr.value, 0);
+    // UPDATED: Calculate Total based on FILTERED list, not combined list
+    const totalCost = filteredList.reduce((acc, curr) => acc + curr.value, 0);
 
     return (
         <div className="space-y-6 animate-in slide-in-from-right duration-500">
@@ -236,7 +246,6 @@ export const AIToolsManager: React.FC = () => {
 
                         <button 
                             onClick={handleAdd}
-                            disabled={isSubmitting || !newName || !newValue || !newDate}
                             className="w-full bg-black text-white font-black uppercase tracking-widest py-3 rounded-lg hover:bg-gray-800 transition-all flex items-center justify-center gap-2 mt-2 disabled:opacity-50 disabled:cursor-not-allowed text-xs"
                         >
                             {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} strokeWidth={3} />}
@@ -250,13 +259,13 @@ export const AIToolsManager: React.FC = () => {
                     {/* Summary Card */}
                     <div className="bg-black text-white rounded-2xl p-6 shadow-float flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden">
                         <div className="relative z-10 text-center md:text-left">
-                            <p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest mb-0.5">Custo Mensal Total</p>
+                            <p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest mb-0.5">Custo Mensal (Filtro)</p>
                             <p className="text-4xl font-black tracking-tighter">{formatCurrency(totalCost)}</p>
                         </div>
                         <div className="relative z-10 flex items-center gap-4">
                             <div className="text-right hidden md:block">
-                                <p className="font-bold text-base">{loading ? '...' : combinedList.length} Itens</p>
-                                <p className="text-gray-400 text-xs">Ativos</p>
+                                <p className="font-bold text-base">{loading ? '...' : filteredList.length} Itens</p>
+                                <p className="text-gray-400 text-xs">Exibidos</p>
                             </div>
                             <div className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center backdrop-blur-sm">
                                 <DollarSign size={24} />

@@ -4,9 +4,11 @@ import { Project } from '../types';
 import { formatCurrency, extractDominantColor, compressImage, formatCurrencyInput, parseCurrencyInput } from '../services/utils';
 import { Briefcase, Building2, Plus, X, MapPin, Upload, Trash2, MessageCircle, ExternalLink, Check, Navigation, Loader2, Search } from 'lucide-react';
 import { useFirestoreCollection } from '../hooks/useFirestore';
+import { useToast } from '../context/ToastContext';
 
 export const Dashboard: React.FC = () => {
   const { data: projects, loading, addItem, updateItem, deleteItem } = useFirestoreCollection<Project>('projects');
+  const { addToast } = useToast();
   
   const [isAdding, setIsAdding] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
@@ -29,7 +31,10 @@ export const Dashboard: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleAddProject = async () => {
-    if (!newName) return;
+    if (!newName) {
+        addToast('Preencha o nome do projeto.', 'warning');
+        return;
+    }
     setIsSubmitting(true);
 
     try {
@@ -48,11 +53,12 @@ export const Dashboard: React.FC = () => {
         };
 
         await addItem(newProject);
+        addToast('Projeto criado com sucesso!', 'success');
         setIsAdding(false);
         resetForm();
     } catch (error) {
         console.error("Error adding project", error);
-        alert("Erro ao adicionar projeto.");
+        addToast('Erro ao adicionar projeto.', 'error');
     } finally {
         setIsSubmitting(false);
     }
@@ -69,6 +75,7 @@ export const Dashboard: React.FC = () => {
       );
       if (confirmDelete) {
           await deleteItem(id);
+          addToast('Projeto removido.', 'info');
       }
   };
 
@@ -77,10 +84,11 @@ export const Dashboard: React.FC = () => {
       setIsSaving(true);
       try {
           await updateItem(editingProject.id, editingProject);
+          addToast('Alterações salvas.', 'success');
           setEditingProject(null);
       } catch (error) {
           console.error("Error updating project", error);
-          alert("Erro ao salvar alterações.");
+          addToast('Erro ao salvar alterações.', 'error');
       } finally {
           setIsSaving(false);
       }
@@ -328,7 +336,7 @@ export const Dashboard: React.FC = () => {
                  <div className="md:col-span-2 lg:col-span-3 pt-2">
                     <button 
                         onClick={handleAddProject} 
-                        disabled={isSubmitting || !newName}
+                        disabled={isSubmitting}
                         className="w-full bg-black text-white py-3 rounded-lg font-black uppercase tracking-widest text-xs hover:scale-[1.01] transition-transform disabled:opacity-50 disabled:scale-100 flex items-center justify-center gap-2"
                     >
                         {isSubmitting && <Loader2 size={16} className="animate-spin"/>}
