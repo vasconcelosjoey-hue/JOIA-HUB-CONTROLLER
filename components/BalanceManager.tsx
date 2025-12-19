@@ -1,292 +1,395 @@
 
-import React from 'react';
+import React, { useMemo, useRef } from 'react';
 import { useFirestoreCollection } from '../hooks/useFirestore';
-import { Project, AITool, Platform } from '../types';
+import { Project, AITool, Platform, PartnershipCard } from '../types';
 import { formatCurrency } from '../services/utils';
-import { PieChart, TrendingUp, TrendingDown, Activity, AlertTriangle, ArrowRight, Lightbulb, Wallet, ArrowUpRight, ArrowDownRight, Target } from 'lucide-react';
+import { PieChart as PieIcon, TrendingUp, TrendingDown, Activity, Download, Copy, Share2, Wallet, Users, LayoutGrid, CheckCircle2, AlertCircle } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { toJpeg } from 'html-to-image';
+import { useToast } from '../context/ToastContext';
 
-export const BalanceManager: React.FC = () => {
-    // 1. Fetch Data
-    const { data: projects, loading: loadProjects } = useFirestoreCollection<Project>('projects');
-    const { data: tools, loading: loadTools } = useFirestoreCollection<AITool>('ai_tools');
-    const { data: platforms, loading: loadPlatforms } = useFirestoreCollection<Platform>('platforms');
+// Simple SVG Pie Chart Component
+const SimplePieChart = ({ data, colors }: { data: { label: string, value: number }[], colors: string[] }) => {
+    const total = data.reduce((acc, d) => acc + d.value, 0);
+    let cumulativePercent = 0;
 
-    const loading = loadProjects || loadTools || loadPlatforms;
-
-    // 2. Calculate Totals
-    const totalRevenue = projects.reduce((acc, curr) => acc + (curr.valorContrato || 0), 0);
-    const totalToolsCost = tools.reduce((acc, curr) => acc + (curr.value || 0), 0);
-    const totalPlatformsCost = platforms.reduce((acc, curr) => acc + (curr.value || 0), 0);
-    
-    const totalExpenses = totalToolsCost + totalPlatformsCost;
-    const netProfit = totalRevenue - totalExpenses;
-    const margin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
-
-    // 3. Determine Health Status
-    let healthStatus: 'excellent' | 'good' | 'warning' | 'critical' = 'good';
-    if (margin > 40) healthStatus = 'excellent';
-    else if (margin > 20) healthStatus = 'good';
-    else if (margin > 0) healthStatus = 'warning';
-    else healthStatus = 'critical';
-
-    // 4. Analysis Logic
-    const avgProjectValue = projects.length > 0 ? totalRevenue / projects.length : 0;
-    const lowestProjects = [...projects].sort((a, b) => a.valorContrato - b.valorContrato).slice(0, 3);
-    const topExpenses = [...tools, ...platforms].sort((a, b) => b.value - a.value).slice(0, 3);
-
-    const getStatusColor = () => {
-        switch(healthStatus) {
-            case 'excellent': return 'bg-emerald-500';
-            case 'good': return 'bg-blue-500';
-            case 'warning': return 'bg-yellow-500';
-            case 'critical': return 'bg-red-500';
-        }
-    };
-
-    const getStatusText = () => {
-        switch(healthStatus) {
-            case 'excellent': return 'Excelente';
-            case 'good': return 'Saudável';
-            case 'warning': return 'Atenção';
-            case 'critical': return 'Crítico';
-        }
-    };
-
-    if (loading) {
-        return <div className="p-10 text-center text-gray-400 font-bold">Carregando dados financeiros...</div>;
+    function getCoordinatesForPercent(percent: number) {
+        const x = Math.cos(2 * Math.PI * percent);
+        const y = Math.sin(2 * Math.PI * percent);
+        return [x, y];
     }
 
     return (
-        <div className="space-y-6 pb-20 animate-in fade-in duration-500">
+        <svg viewBox="-1 -1 2 2" className="w-full h-full -rotate-90">
+            {data.map((slice, i) => {
+                const [startX, startY] = getCoordinatesForPercent(cumulativePercent);
+                cumulativePercent += slice.value / total;
+                const [endX, endY] = getCoordinatesForPercent(cumulativePercent);
+                const largeArcFlag = slice.value / total > 0.5 ? 1 : 0;
+                const pathData = [
+                    `M ${startX} ${startY}`,
+                    `A 1 1 0 ${largeArcFlag} 1 ${endX} ${endY}`,
+                    `L 0 0`,
+                ].join(' ');
+                return <path key={i} d={pathData} fill={colors[i % colors.length]} stroke="#fff" strokeWidth="0.01" />;
+            })}
+            <circle r="0.6" cx="0" cy="0" fill="#fff" />
+        </svg>
+    );
+};
+
+// Simple SVG Bar Chart Component
+const SimpleBarChart = ({ data, color }: { data: { label: string, value: number }[], color: string }) => {
+    const max = Math.max(...data.map(d => d.value), 1);
+    return (
+        <div className="flex items-end justify-between h-32 gap-1 px-2">
+            {data.map((item, i) => (
+                <div key={i} className="flex-1 group relative flex flex-col items-center">
+                    <motion.div 
+                        initial={{ height: 0 }}
+                        animate={{ height: `${(item.value / max) * 100}%` }}
+                        className="w-full rounded-t-sm"
+                        style={{ backgroundColor: color }}
+                    />
+                    <div className="absolute -top-6 opacity-0 group-hover:opacity-100 transition-opacity bg-black text-white text-[8px] px-1 py-0.5 rounded whitespace-nowrap z-10">
+                        {formatCurrency(item.value)}
+                    </div>
+                </div>
+            ))}
+        </div>
+    );
+};
+
+export const BalanceManager: React.FC = () => {
+    const { data: projects, loading: loadProjects } = useFirestoreCollection<Project>('projects');
+    const { data: tools, loading: loadTools } = useFirestoreCollection<AITool>('ai_tools');
+    const { data: platforms, loading: loadPlatforms } = useFirestoreCollection<Platform>('platforms');
+    const { data: partnerships, loading: loadPartnerships } = useFirestoreCollection<PartnershipCard>('partnerships');
+    const { addToast } = useToast();
+
+    const sectionsRefs = {
+        tools: useRef<HTMLDivElement>(null),
+        partnerships: useRef<HTMLDivElement>(null),
+        projects: useRef<HTMLDivElement>(null)
+    };
+
+    const loading = loadProjects || loadTools || loadPlatforms || loadPartnerships;
+
+    // --- DATA AGGREGATION ---
+    const stats = useMemo(() => {
+        const totalRevenue = projects.reduce((acc, curr) => acc + (curr.valorContrato || 0), 0);
+        const totalToolsCost = tools.reduce((acc, curr) => acc + (curr.value || 0), 0);
+        const totalPlatformsCost = platforms.reduce((acc, curr) => acc + (curr.value || 0), 0);
+        const totalExpenses = totalToolsCost + totalPlatformsCost;
+        
+        // Payouts for partnerships
+        const partnerPayouts: Record<string, number> = {};
+        partnerships.forEach(p => {
+            p.partners.forEach(partner => {
+                partnerPayouts[partner.name] = (partnerPayouts[partner.name] || 0) + partner.value;
+            });
+        });
+
+        const ownerCosts: Record<string, number> = {};
+        [...tools, ...platforms].forEach(item => {
+            const owner = item.owner || 'OUTROS';
+            ownerCosts[owner] = (ownerCosts[owner] || 0) + item.value;
+        });
+
+        const catCosts: Record<string, number> = {};
+        [...tools, ...platforms].forEach(item => {
+            const cat = item.category || (item.description && item.description.length < 15 ? item.description : 'GERAL');
+            catCosts[cat] = (catCosts[cat] || 0) + item.value;
+        });
+
+        const statusDistribution: Record<string, number> = {};
+        projects.forEach(p => {
+            statusDistribution[p.status] = (statusDistribution[p.status] || 0) + 1;
+        });
+
+        return {
+            totalRevenue,
+            totalExpenses,
+            netProfit: totalRevenue - totalExpenses,
+            ownerData: Object.entries(ownerCosts).map(([label, value]) => ({ label, value })),
+            catData: Object.entries(catCosts).map(([label, value]) => ({ label, value })),
+            partnerData: Object.entries(partnerPayouts).map(([label, value]) => ({ label, value })).sort((a,b) => b.value - a.value),
+            statusData: Object.entries(statusDistribution).map(([label, value]) => ({ label, value })),
+            projectValues: projects.map(p => ({ label: p.nome, value: p.valorContrato })).sort((a,b) => b.value - a.value)
+        };
+    }, [projects, tools, platforms, partnerships]);
+
+    const copySectionAsImage = async (ref: React.RefObject<HTMLDivElement>, name: string) => {
+        if (!ref.current) return;
+        try {
+            const dataUrl = await toJpeg(ref.current, { quality: 0.95, backgroundColor: '#F5F5F7' });
+            const response = await fetch(dataUrl);
+            const blob = await response.blob();
+            await navigator.clipboard.write([
+                new ClipboardItem({ 'image/jpeg': blob })
+            ]);
+            addToast(`Dashboard de ${name} copiado como imagem!`, 'success');
+        } catch (err) {
+            console.error(err);
+            addToast('Erro ao capturar dashboard.', 'error');
+        }
+    };
+
+    if (loading) return <div className="p-20 text-center"><Loader /></div>;
+
+    const COLORS = ['#000000', '#3b82f6', '#f59e0b', '#ef4444', '#10b981', '#8b5cf6', '#ec4899'];
+
+    return (
+        <div className="space-y-12 pb-32 max-w-7xl mx-auto">
             
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-                <div>
-                    <h2 className="text-2xl md:text-3xl font-black text-black tracking-tight flex items-center gap-2">
-                        <PieChart className="w-6 h-6 md:w-7 md:h-7" strokeWidth={2.5} />
-                        Balance
-                    </h2>
-                    <p className="text-gray-600 font-medium mt-0.5 text-sm md:text-base">Diagnóstico operacional e saúde financeira.</p>
-                </div>
-                <div className={`px-4 py-2 rounded-full text-white font-black uppercase text-xs tracking-widest flex items-center gap-2 shadow-lg ${getStatusColor()}`}>
-                    <Activity size={16} />
-                    Status: {getStatusText()}
-                </div>
-            </div>
-
-            {/* --- HERO: PROFIT DISPLAY --- */}
-            <div className={`rounded-3xl p-6 md:p-8 text-white shadow-2xl relative overflow-hidden transition-all duration-500 ${
-                healthStatus === 'critical' ? 'bg-gradient-to-br from-red-600 to-red-900' : 
-                healthStatus === 'warning' ? 'bg-gradient-to-br from-yellow-500 to-orange-600' :
-                'bg-black'
-            }`}>
-                <div className="relative z-10 flex flex-col md:flex-row items-start md:items-end justify-between gap-6">
-                    <div>
-                        <p className="text-white/60 font-bold uppercase tracking-widest text-xs mb-1">Lucro Líquido Estimado</p>
-                        <h3 className="text-4xl md:text-6xl font-black tracking-tighter">
-                            {formatCurrency(netProfit)}
-                        </h3>
-                        <div className="mt-3 inline-flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-lg backdrop-blur-md">
-                            <span className={`text-sm font-bold ${margin >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                                {margin.toFixed(1)}% de Margem
-                            </span>
-                            <span className="text-white/40 text-xs">Operacional</span>
+            {/* --- TOP HEADER --- */}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 bg-black text-white p-8 rounded-[2rem] shadow-2xl relative overflow-hidden">
+                <div className="z-10">
+                    <p className="text-gray-400 text-xs font-black uppercase tracking-[0.2em] mb-2">Health Monitor</p>
+                    <h1 className="text-4xl md:text-6xl font-black tracking-tighter flex items-center gap-4">
+                        {formatCurrency(stats.netProfit)}
+                        <span className="text-xs bg-emerald-500 text-white px-3 py-1 rounded-full animate-pulse">LIVE BALANCE</span>
+                    </h1>
+                    <div className="flex items-center gap-6 mt-6">
+                        <div className="flex flex-col">
+                            <span className="text-xs font-bold text-gray-500 uppercase">Receita</span>
+                            <span className="text-lg font-black text-emerald-400">+{formatCurrency(stats.totalRevenue)}</span>
                         </div>
-                    </div>
-                    
-                    {/* Visual Bar Graph */}
-                    <div className="w-full md:w-64 space-y-3 bg-white/5 p-4 rounded-xl backdrop-blur-sm border border-white/10">
-                        <div className="flex justify-between text-xs font-bold text-white/80">
-                            <span>Receita</span>
-                            <span>{formatCurrency(totalRevenue)}</span>
+                        <div className="w-px h-8 bg-gray-800" />
+                        <div className="flex flex-col">
+                            <span className="text-xs font-bold text-gray-500 uppercase">Custos</span>
+                            <span className="text-lg font-black text-red-400">-{formatCurrency(stats.totalExpenses)}</span>
                         </div>
-                        <div className="w-full bg-white/10 h-1.5 rounded-full overflow-hidden">
-                            <div className="bg-emerald-500 h-full rounded-full" style={{ width: '100%' }}></div>
-                        </div>
-                        
-                        <div className="flex justify-between text-xs font-bold text-white/80 mt-2">
-                            <span>Despesas</span>
-                            <span>{formatCurrency(totalExpenses)}</span>
-                        </div>
-                        <div className="w-full bg-white/10 h-1.5 rounded-full overflow-hidden">
-                            <div className="bg-red-500 h-full rounded-full" style={{ width: `${Math.min((totalExpenses / totalRevenue) * 100, 100)}%` }}></div>
+                        <div className="w-px h-8 bg-gray-800" />
+                        <div className="flex flex-col">
+                            <span className="text-xs font-bold text-gray-500 uppercase">Margem</span>
+                            <span className="text-lg font-black text-blue-400">{((stats.netProfit / (stats.totalRevenue || 1)) * 100).toFixed(1)}%</span>
                         </div>
                     </div>
                 </div>
-
-                {/* Decorative Background */}
-                <div className="absolute -top-20 -right-20 w-80 h-80 bg-white/5 rounded-full blur-3xl"></div>
-                <div className="absolute bottom-0 left-0 w-full h-1/2 bg-gradient-to-t from-black/50 to-transparent"></div>
-            </div>
-
-            {/* --- METRIC CARDS --- */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {/* Revenue */}
-                <div className="bg-white p-5 rounded-2xl shadow-apple border border-gray-100 relative group overflow-hidden">
-                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                        <ArrowUpRight size={40} className="text-emerald-500" />
-                    </div>
-                    <div className="flex items-center gap-3 mb-3">
-                        <div className="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600">
-                            <Wallet size={20} />
-                        </div>
-                        <span className="text-xs font-black text-gray-400 uppercase tracking-wide">Receita Total</span>
-                    </div>
-                    <p className="text-2xl font-black text-black">{formatCurrency(totalRevenue)}</p>
-                    <p className="text-xs font-medium text-gray-400 mt-1">{projects.length} Contratos Ativos</p>
-                </div>
-
-                {/* Fixed Costs */}
-                <div className="bg-white p-5 rounded-2xl shadow-apple border border-gray-100 relative group overflow-hidden">
-                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                        <ArrowDownRight size={40} className="text-red-500" />
-                    </div>
-                    <div className="flex items-center gap-3 mb-3">
-                        <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center text-red-600">
-                            <TrendingDown size={20} />
-                        </div>
-                        <span className="text-xs font-black text-gray-400 uppercase tracking-wide">Custo Fixo</span>
-                    </div>
-                    <p className="text-2xl font-black text-black">{formatCurrency(totalExpenses)}</p>
-                    <p className="text-xs font-medium text-gray-400 mt-1">{tools.length + platforms.length} Recorrências Mensais</p>
-                </div>
-
-                 {/* Average Ticket */}
-                 <div className="bg-white p-5 rounded-2xl shadow-apple border border-gray-100 relative group overflow-hidden">
-                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                        <Target size={40} className="text-blue-500" />
-                    </div>
-                    <div className="flex items-center gap-3 mb-3">
-                        <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600">
-                            <TrendingUp size={20} />
-                        </div>
-                        <span className="text-xs font-black text-gray-400 uppercase tracking-wide">Ticket Médio</span>
-                    </div>
-                    <p className="text-2xl font-black text-black">{formatCurrency(avgProjectValue)}</p>
-                    <p className="text-xs font-medium text-gray-400 mt-1">Por cliente</p>
+                <div className="hidden lg:block w-48 h-48 opacity-20 z-0 absolute right-10 top-1/2 -translate-y-1/2">
+                   <Users size={200} />
                 </div>
             </div>
 
-            {/* --- INTELLIGENT ACTION PLAN --- */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                
-                {/* 1. Action Plan Text */}
-                <div className="lg:col-span-2 bg-white rounded-2xl p-6 shadow-float border border-gray-200">
-                    <div className="flex items-center gap-2 mb-4 border-b border-gray-100 pb-3">
-                        <Lightbulb className="text-yellow-500 fill-yellow-500" size={20} />
-                        <h3 className="font-black text-black uppercase tracking-wide text-sm">Plano de Ação Inteligente</h3>
+            {/* --- 1. FERRAMENTAS & CUSTOS --- */}
+            <div ref={sectionsRefs.tools} className="bg-white rounded-[2rem] p-8 shadow-apple border border-gray-100 space-y-8 group">
+                <div className="flex items-center justify-between border-b border-gray-100 pb-6">
+                    <div className="flex items-center gap-4">
+                        <div className="p-3 bg-black text-white rounded-2xl">
+                            <Wallet size={24} />
+                        </div>
+                        <div>
+                            <h2 className="text-2xl font-black uppercase tracking-tight">Custos Operacionais</h2>
+                            <p className="text-gray-400 text-sm font-bold">Distribuição de mensalidades e ferramentas IA</p>
+                        </div>
                     </div>
-                    
+                    <button 
+                        onClick={() => copySectionAsImage(sectionsRefs.tools, 'Despesas')}
+                        className="p-3 bg-gray-50 hover:bg-black hover:text-white rounded-xl transition-all flex items-center gap-2 text-xs font-black uppercase"
+                    >
+                        <Copy size={16} /> Capturar
+                    </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    {/* Pie: Owners */}
                     <div className="space-y-4">
-                        {healthStatus === 'critical' && (
-                            <div className="bg-red-50 border border-red-100 p-4 rounded-xl flex gap-3 items-start">
-                                <AlertTriangle className="text-red-600 shrink-0 mt-0.5" size={18} />
-                                <div>
-                                    <h4 className="font-bold text-red-700 text-sm">Ação Imediata Necessária</h4>
-                                    <p className="text-xs text-red-600 mt-1 leading-relaxed">
-                                        A operação está deficitária ou com margem perigosamente baixa. 
-                                        Recomenda-se auditar e cortar ferramentas não essenciais imediatamente. 
-                                        Considere renegociar os contratos de menor valor listados abaixo.
-                                    </p>
-                                </div>
+                        <h4 className="text-[10px] font-black uppercase text-gray-400 tracking-widest text-center">Por Responsável</h4>
+                        <div className="h-48 flex items-center justify-center relative">
+                            <SimplePieChart data={stats.ownerData} colors={COLORS} />
+                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                <span className="text-[10px] font-black text-black bg-white/80 backdrop-blur px-2 py-1 rounded shadow-sm uppercase">Owners</span>
                             </div>
-                        )}
-                        {healthStatus === 'warning' && (
-                            <div className="bg-yellow-50 border border-yellow-100 p-4 rounded-xl flex gap-3 items-start">
-                                <Activity className="text-yellow-600 shrink-0 mt-0.5" size={18} />
-                                <div>
-                                    <h4 className="font-bold text-yellow-700 text-sm">Otimização de Margem</h4>
-                                    <p className="text-xs text-yellow-600 mt-1 leading-relaxed">
-                                        A operação é sustentável, mas qualquer imprevisto pode gerar prejuízo.
-                                        Foque em aumentar o ticket médio dos clientes atuais (Upsell) antes de buscar novos clientes que gerem mais custo operacional.
-                                    </p>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 mt-4">
+                            {stats.ownerData.map((d, i) => (
+                                <div key={i} className="flex items-center gap-2 text-[10px] font-bold">
+                                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
+                                    <span className="truncate">{d.label}</span>
+                                    <span className="ml-auto text-gray-400">{((d.value / stats.totalExpenses) * 100).toFixed(0)}%</span>
                                 </div>
-                            </div>
-                        )}
-                         {healthStatus === 'excellent' && (
-                            <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-xl flex gap-3 items-start">
-                                <Target className="text-emerald-600 shrink-0 mt-0.5" size={18} />
-                                <div>
-                                    <h4 className="font-bold text-emerald-700 text-sm">Expansão e Reservas</h4>
-                                    <p className="text-xs text-emerald-600 mt-1 leading-relaxed">
-                                        Excelente saúde financeira. É o momento ideal para criar um fundo de reserva de emergência (3-6 meses de custo fixo) 
-                                        ou investir em automação para escalar sem aumentar custos proporcionalmente.
-                                    </p>
-                                </div>
-                            </div>
-                        )}
+                            ))}
+                        </div>
+                    </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-                             <div>
-                                <h5 className="text-[10px] font-bold text-gray-400 uppercase mb-2">Contratos Abaixo da Média</h5>
-                                <ul className="space-y-2">
-                                    {lowestProjects.map(p => (
-                                        <li key={p.id} className="flex justify-between items-center bg-gray-50 p-2 rounded-lg text-xs border border-gray-100">
-                                            <span className="font-bold truncate max-w-[120px]">{p.nome}</span>
-                                            <span className="text-red-500 font-bold">{formatCurrency(p.valorContrato)}</span>
-                                        </li>
-                                    ))}
-                                </ul>
+                    {/* Pie: Categories */}
+                    <div className="space-y-4">
+                        <h4 className="text-[10px] font-black uppercase text-gray-400 tracking-widest text-center">Por Categoria</h4>
+                        <div className="h-48 flex items-center justify-center relative">
+                            <SimplePieChart data={stats.catData} colors={COLORS.slice().reverse()} />
+                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                <span className="text-[10px] font-black text-black bg-white/80 backdrop-blur px-2 py-1 rounded shadow-sm uppercase">Categorias</span>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 mt-4">
+                            {stats.catData.slice(0, 6).map((d, i) => (
+                                <div key={i} className="flex items-center gap-2 text-[10px] font-bold">
+                                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS.slice().reverse()[i % COLORS.length] }} />
+                                    <span className="truncate">{d.label}</span>
+                                    <span className="ml-auto text-gray-400">{((d.value / stats.totalExpenses) * 100).toFixed(0)}%</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Bar: Top Costs */}
+                    <div className="space-y-4">
+                        <h4 className="text-[10px] font-black uppercase text-gray-400 tracking-widest text-center">Distribuição de Valor</h4>
+                        <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100 h-48 flex flex-col justify-end">
+                            <SimpleBarChart data={[...tools, ...platforms].sort((a,b)=>b.value-a.value).slice(0, 10).map(t=>({ label: t.name, value: t.value }))} color="#000" />
+                        </div>
+                        <div className="space-y-2 mt-2">
+                             <p className="text-[10px] font-bold text-gray-400 uppercase">Top 3 Maiores Custos</p>
+                             {[...tools, ...platforms].sort((a,b)=>b.value-a.value).slice(0, 3).map((item, i) => (
+                                 <div key={i} className="flex justify-between items-center text-xs font-black">
+                                     <span className="uppercase text-gray-600 truncate max-w-[140px]">{item.name}</span>
+                                     <span>{formatCurrency(item.value)}</span>
+                                 </div>
+                             ))}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* --- 2. PARCERIAS & REPASSES --- */}
+            <div ref={sectionsRefs.partnerships} className="bg-white rounded-[2rem] p-8 shadow-apple border border-gray-100 space-y-8 group">
+                <div className="flex items-center justify-between border-b border-gray-100 pb-6">
+                    <div className="flex items-center gap-4">
+                        <div className="p-3 bg-blue-600 text-white rounded-2xl">
+                            <Users size={24} />
+                        </div>
+                        <div>
+                            <h2 className="text-2xl font-black uppercase tracking-tight">Divisão de Lucros</h2>
+                            <p className="text-gray-400 text-sm font-bold">Rateio entre sócios e parceiros estratégicos</p>
+                        </div>
+                    </div>
+                    <button 
+                        onClick={() => copySectionAsImage(sectionsRefs.partnerships, 'Parcerias')}
+                        className="p-3 bg-gray-50 hover:bg-black hover:text-white rounded-xl transition-all flex items-center gap-2 text-xs font-black uppercase"
+                    >
+                        <Copy size={16} /> Capturar
+                    </button>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                    {/* Partners Ranking */}
+                    <div className="space-y-6">
+                        <h4 className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Ranking de Repasse</h4>
+                        <div className="space-y-3">
+                            {stats.partnerData.map((p, i) => (
+                                <motion.div 
+                                    key={i}
+                                    initial={{ opacity: 0, x: -20 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ delay: i * 0.1 }}
+                                    className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100"
+                                >
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center font-black text-xs">
+                                            {i + 1}
+                                        </div>
+                                        <span className="font-black text-sm uppercase tracking-wide">{p.label}</span>
+                                    </div>
+                                    <span className="font-black text-lg text-blue-600">{formatCurrency(p.value)}</span>
+                                </motion.div>
+                            ))}
+                            {stats.partnerData.length === 0 && (
+                                <p className="text-center py-10 text-gray-400 font-bold text-sm">Sem parcerias registradas.</p>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Chart: Partner Share */}
+                    <div className="flex flex-col justify-center items-center bg-gray-50 rounded-[2rem] p-8 border border-gray-100">
+                        <h4 className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-8">Participação no Rateio</h4>
+                        <div className="w-full max-w-[280px] aspect-square relative">
+                            <SimplePieChart data={stats.partnerData.length > 0 ? stats.partnerData : [{ label: 'Nenhum', value: 1 }]} colors={['#3b82f6', '#1e40af', '#60a5fa', '#93c5fd']} />
+                            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                                <Users size={32} className="text-blue-600 opacity-20 mb-1" />
+                                <span className="text-[10px] font-black text-blue-600 uppercase">Atores</span>
+                            </div>
+                        </div>
+                        <p className="mt-8 text-xs font-bold text-gray-400 text-center uppercase tracking-widest leading-relaxed">
+                            Total rateado este mês:<br/>
+                            <span className="text-black text-lg font-black">{formatCurrency(stats.partnerData.reduce((a,b)=>a+b.value, 0))}</span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            {/* --- 3. SAÚDE DA CARTEIRA (PROJETOS) --- */}
+            <div ref={sectionsRefs.projects} className="bg-white rounded-[2rem] p-8 shadow-apple border border-gray-100 space-y-8 group">
+                <div className="flex items-center justify-between border-b border-gray-100 pb-6">
+                    <div className="flex items-center gap-4">
+                        <div className="p-3 bg-emerald-500 text-white rounded-2xl">
+                            <LayoutGrid size={24} />
+                        </div>
+                        <div>
+                            <h2 className="text-2xl font-black uppercase tracking-tight">Saúde da Carteira</h2>
+                            <p className="text-gray-400 text-sm font-bold">Desempenho de projetos e status operacional</p>
+                        </div>
+                    </div>
+                    <button 
+                        onClick={() => copySectionAsImage(sectionsRefs.projects, 'Projetos')}
+                        className="p-3 bg-gray-50 hover:bg-black hover:text-white rounded-xl transition-all flex items-center gap-2 text-xs font-black uppercase"
+                    >
+                        <Copy size={16} /> Capturar
+                    </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    {/* Project Status Bubble */}
+                    <div className="p-6 bg-gray-50 rounded-[2rem] border border-gray-100 flex flex-col justify-center items-center gap-6">
+                        <h4 className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Status da Operação</h4>
+                        <div className="flex flex-wrap justify-center gap-3">
+                            {stats.statusData.map((s, i) => (
+                                <div key={i} className="flex flex-col items-center gap-1 p-4 bg-white rounded-2xl shadow-sm border border-gray-100 min-w-[80px]">
+                                    <span className="text-2xl font-black text-black">{s.value}</span>
+                                    <span className="text-[8px] font-black text-gray-400 uppercase text-center">{s.label}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Top Revenue Projects */}
+                    <div className="lg:col-span-2 space-y-4">
+                        <h4 className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Volume por Contrato (Top 15)</h4>
+                        <div className="h-48 bg-black rounded-2xl p-6 flex items-end">
+                            <SimpleBarChart data={stats.projectValues.slice(0, 15)} color="#10b981" />
+                        </div>
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-4">
+                             <div className="p-4 border border-gray-100 rounded-xl">
+                                <p className="text-[8px] font-black text-gray-400 uppercase">Média de Contrato</p>
+                                <p className="text-lg font-black">{formatCurrency(stats.totalRevenue / (projects.length || 1))}</p>
                              </div>
-                             <div>
-                                <h5 className="text-[10px] font-bold text-gray-400 uppercase mb-2">Maiores Custos</h5>
-                                <ul className="space-y-2">
-                                    {topExpenses.map(e => (
-                                        <li key={e.id} className="flex justify-between items-center bg-gray-50 p-2 rounded-lg text-xs border border-gray-100">
-                                            <span className="font-bold truncate max-w-[120px]">{e.name}</span>
-                                            <span className="text-gray-600 font-bold">{formatCurrency(e.value)}</span>
-                                        </li>
-                                    ))}
-                                </ul>
+                             <div className="p-4 border border-gray-100 rounded-xl">
+                                <p className="text-[8px] font-black text-gray-400 uppercase">Ativos Totais</p>
+                                <p className="text-lg font-black">{projects.length}</p>
+                             </div>
+                             <div className="p-4 border border-gray-100 rounded-xl bg-emerald-50 border-emerald-100">
+                                <p className="text-[8px] font-black text-emerald-600 uppercase">Potencial Líquido</p>
+                                <p className="text-lg font-black text-emerald-700">{formatCurrency(stats.netProfit)}</p>
                              </div>
                         </div>
                     </div>
                 </div>
+            </div>
 
-                {/* 2. Visual Breakdown */}
-                <div className="bg-white rounded-2xl p-6 shadow-apple border border-gray-200 flex flex-col justify-between">
-                     <div>
-                        <h3 className="font-black text-black uppercase tracking-wide text-sm mb-6 flex items-center gap-2">
-                            <TrendingDown size={18} /> Composição de Custos
-                        </h3>
-                        
-                        <div className="space-y-6">
-                            <div>
-                                <div className="flex justify-between text-xs font-bold mb-1">
-                                    <span>Ferramentas IA</span>
-                                    <span>{((totalToolsCost / totalExpenses) * 100 || 0).toFixed(0)}%</span>
-                                </div>
-                                <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
-                                    <div className="bg-blue-500 h-full" style={{ width: `${(totalToolsCost / totalExpenses) * 100}%` }}></div>
-                                </div>
-                                <p className="text-right text-xs font-bold text-gray-400 mt-1">{formatCurrency(totalToolsCost)}</p>
-                            </div>
-
-                            <div>
-                                <div className="flex justify-between text-xs font-bold mb-1">
-                                    <span>Plataformas & Repasses</span>
-                                    <span>{((totalPlatformsCost / totalExpenses) * 100 || 0).toFixed(0)}%</span>
-                                </div>
-                                <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
-                                    <div className="bg-orange-500 h-full" style={{ width: `${(totalPlatformsCost / totalExpenses) * 100}%` }}></div>
-                                </div>
-                                <p className="text-right text-xs font-bold text-gray-400 mt-1">{formatCurrency(totalPlatformsCost)}</p>
-                            </div>
-                        </div>
-                     </div>
-
-                     <div className="bg-gray-50 rounded-xl p-4 mt-6 border border-gray-100">
-                        <div className="flex items-center gap-2 text-gray-500 mb-2">
-                            <ArrowRight size={14} />
-                            <span className="text-[10px] font-bold uppercase">Break-even Point</span>
-                        </div>
-                        <p className="text-xs text-gray-600 leading-tight">
-                            Você precisa de <strong>{formatCurrency(totalExpenses)}</strong> apenas para cobrir custos.
-                            Tudo acima disso é lucro.
-                        </p>
-                     </div>
+            {/* --- FOOTER INSIGHT --- */}
+            <div className="text-center space-y-2 pb-10">
+                <div className="inline-flex items-center gap-2 px-4 py-2 bg-white rounded-full border border-gray-200 shadow-sm">
+                    <CheckCircle2 size={14} className="text-emerald-500" />
+                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">Dados integrados via Cloud Firestore</span>
                 </div>
-
             </div>
         </div>
     );
 };
+
+const Loader = () => (
+    <div className="flex flex-col items-center justify-center gap-4 py-20">
+        <Activity size={32} className="animate-pulse text-black" />
+        <p className="text-[10px] font-black uppercase tracking-widest">Calculando Métricas...</p>
+    </div>
+);

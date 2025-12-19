@@ -46,7 +46,8 @@ export interface PartnershipCard extends BaseEntity {
 // --- 3. AI TOOLS DOMAIN ---
 export interface AITool extends BaseEntity {
     name: string;
-    description?: string; // Added description
+    description?: string;
+    category?: string; // Added category for charts
     value: number;
     dueDate: number;
     renovationCycle: 'MONTHLY' | 'YEARLY';
@@ -57,7 +58,8 @@ export interface AITool extends BaseEntity {
 // --- 4. PLATFORMS DOMAIN ---
 export interface Platform extends BaseEntity {
     name: string;
-    description?: string; // Added description
+    description?: string;
+    category?: string; // Added category for charts
     client: string; // Legacy field, now preferred linkedProjectId
     value: number;
     dueDate: number;
