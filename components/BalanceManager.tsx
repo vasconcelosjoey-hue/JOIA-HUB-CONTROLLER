@@ -3,7 +3,7 @@ import React, { useMemo, useRef, useState } from 'react';
 import { useFirestoreCollection } from '../hooks/useFirestore';
 import { Project, AITool, Platform, PartnershipCard } from '../types';
 import { formatCurrency } from '../services/utils';
-import { PieChart as PieIcon, TrendingUp, TrendingDown, Activity, Download, Copy, Share2, Wallet, Users, LayoutGrid, CheckCircle2, AlertCircle, Bot, CreditCard, ChevronRight } from 'lucide-react';
+import { Activity, Copy, Bot, CreditCard, LayoutGrid, Users, Wallet, DollarSign } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toJpeg } from 'html-to-image';
 import { useToast } from '../context/ToastContext';
@@ -17,12 +17,12 @@ const SimplePieChart = ({ data, colors }: { data: { label: string, value: number
         return [x, y];
     }
     return (
-        <svg viewBox="-1.1 -1.1 2.2 2.2" className="w-full h-full -rotate-90 drop-shadow-2xl">
+        <svg viewBox="-1.1 -1.1 2.2 2.2" className="w-full h-full -rotate-90 drop-shadow-xl">
             <defs>
                 <filter id="f3d" x="-20%" y="-20%" width="140%" height="140%">
-                    <feGaussianBlur in="SourceAlpha" stdDeviation="0.05" />
-                    <feOffset dx="0.02" dy="0.02" result="offsetblur" />
-                    <feComponentTransfer><feFuncA type="linear" slope="0.5"/></feComponentTransfer>
+                    <feGaussianBlur in="SourceAlpha" stdDeviation="0.04" />
+                    <feOffset dx="0.015" dy="0.015" result="offsetblur" />
+                    <feComponentTransfer><feFuncA type="linear" slope="0.4"/></feComponentTransfer>
                     <feMerge><feMergeNode /><feMergeNode in="SourceGraphic" /></feMerge>
                 </filter>
             </defs>
@@ -49,16 +49,16 @@ const SimplePieChart = ({ data, colors }: { data: { label: string, value: number
     );
 };
 
-const SimpleBarChart = ({ data, color }: { data: { label: string, value: number }[], color: string }) => {
+const SimpleBarChart = ({ data, color, height = "h-32" }: { data: { label: string, value: number }[], color: string, height?: string }) => {
     const max = Math.max(...data.map(d => d.value), 1);
     return (
-        <div className="flex items-end justify-between h-40 gap-2 px-2 overflow-hidden">
+        <div className={`flex items-end justify-between ${height} gap-1.5 px-1 overflow-hidden`}>
             {data.map((item, i) => (
-                <div key={i} className="flex-1 group relative flex flex-col items-center">
+                <div key={i} className="flex-1 group relative flex flex-col items-center h-full justify-end">
                     <motion.div 
                         initial={{ height: 0 }}
                         animate={{ height: `${(item.value / max) * 100}%` }}
-                        className="w-full rounded-t-lg shadow-[inset_0_2px_10px_rgba(255,255,255,0.2)]"
+                        className="w-full rounded-t-md shadow-[inset_0_2px_6px_rgba(255,255,255,0.2)]"
                         style={{ background: `linear-gradient(to top, ${color}cc, ${color})` }}
                     />
                 </div>
@@ -116,122 +116,137 @@ export const BalanceManager: React.FC = () => {
         }
     };
 
-    if (loading) return <div className="p-20 text-center"><Activity className="animate-spin mx-auto" /></div>;
+    if (loading) return <div className="p-10 text-center"><Activity className="animate-spin mx-auto" /></div>;
 
     const COLORS = ['#000', '#2563eb', '#f59e0b', '#dc2626', '#10b981', '#7c3aed'];
 
     return (
-        <div className="space-y-6 max-w-6xl mx-auto pb-20">
-            {/* 3D Header Card */}
-            <div className="bg-gradient-to-br from-black via-zinc-900 to-black text-white p-8 rounded-[2rem] shadow-[0_20px_50px_-10px_rgba(0,0,0,0.5)] border border-white/10 relative overflow-hidden">
-                <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
-                    <div>
-                        <p className="text-zinc-500 text-xs font-black uppercase tracking-[0.3em] mb-2">Net Health Score</p>
-                        <h1 className="text-5xl md:text-7xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white to-zinc-400">
+        <div className="space-y-3 max-w-5xl mx-auto pb-4 h-full flex flex-col">
+            {/* COMPACT 3D Header Card */}
+            <div className="bg-gradient-to-br from-black via-zinc-900 to-black text-white p-4 md:p-6 rounded-3xl shadow-xl border border-white/10 relative overflow-hidden shrink-0">
+                <div className="relative z-10 flex justify-between items-center gap-4">
+                    <div className="flex-1">
+                        <p className="text-zinc-500 text-[10px] font-black uppercase tracking-[0.2em] mb-1">Net Health Score</p>
+                        <h1 className="text-3xl md:text-5xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white to-zinc-400">
                             {formatCurrency(stats.netProfit)}
                         </h1>
-                        <div className="flex gap-6 mt-6">
-                            <div className="flex flex-col"><span className="text-[10px] font-bold text-zinc-500 uppercase">Receita</span><span className="text-xl font-black text-emerald-400">+{formatCurrency(stats.totalRevenue)}</span></div>
-                            <div className="w-px h-8 bg-zinc-800" />
-                            <div className="flex flex-col"><span className="text-[10px] font-bold text-zinc-500 uppercase">Custos</span><span className="text-xl font-black text-red-400">-{formatCurrency(stats.totalExpenses)}</span></div>
+                        <div className="flex gap-4 mt-3">
+                            <div className="flex flex-col">
+                                <span className="text-[9px] font-bold text-zinc-500 uppercase">Receita</span>
+                                <span className="text-base font-black text-emerald-400">+{formatCurrency(stats.totalRevenue)}</span>
+                            </div>
+                            <div className="w-px h-6 bg-zinc-800 self-center" />
+                            <div className="flex flex-col">
+                                <span className="text-[9px] font-bold text-zinc-500 uppercase">Custos</span>
+                                <span className="text-base font-black text-red-400">-{formatCurrency(stats.totalExpenses)}</span>
+                            </div>
                         </div>
                     </div>
-                    <button onClick={handleCapture} className="px-6 py-3 bg-white/10 hover:bg-white text-white hover:text-black rounded-2xl transition-all flex items-center gap-2 text-xs font-black uppercase border border-white/10">
-                        <Copy size={16} /> Capturar Tudo
+                    <button onClick={handleCapture} className="px-4 py-2 bg-white/10 hover:bg-white text-white hover:text-black rounded-xl transition-all flex items-center gap-2 text-[10px] font-black uppercase border border-white/10 shrink-0">
+                        <Copy size={14} /> Capturar
                     </button>
                 </div>
-                <div className="absolute -right-20 -bottom-20 w-80 h-80 bg-blue-600/10 blur-[100px] rounded-full" />
+                <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-blue-600/10 blur-[60px] rounded-full" />
             </div>
 
-            {/* Sub-Aba Navigation */}
-            <div className="flex p-1.5 bg-white border border-gray-200 rounded-2xl shadow-sm max-w-md mx-auto">
-                <button onClick={() => setActiveTab('tools')} className={`flex-1 py-3 text-[10px] font-black uppercase rounded-xl transition-all flex items-center justify-center gap-2 ${activeTab === 'tools' ? 'bg-black text-white shadow-xl translate-z-10' : 'text-gray-400 hover:text-black'}`}>
-                    <Bot size={14} /> Ferramentas
+            {/* Compact Sub-Aba Navigation */}
+            <div className="flex p-1 bg-white border border-gray-200 rounded-2xl shadow-sm max-w-xs mx-auto shrink-0">
+                <button onClick={() => setActiveTab('tools')} className={`flex-1 py-1.5 text-[9px] font-black uppercase rounded-xl transition-all flex items-center justify-center gap-1.5 ${activeTab === 'tools' ? 'bg-black text-white shadow-lg' : 'text-gray-400 hover:text-black'}`}>
+                    <Bot size={12} /> IA
                 </button>
-                <button onClick={() => setActiveTab('partnerships')} className={`flex-1 py-3 text-[10px] font-black uppercase rounded-xl transition-all flex items-center justify-center gap-2 ${activeTab === 'partnerships' ? 'bg-black text-white shadow-xl' : 'text-gray-400 hover:text-black'}`}>
-                    <CreditCard size={14} /> Parcerias
+                <button onClick={() => setActiveTab('partnerships')} className={`flex-1 py-1.5 text-[9px] font-black uppercase rounded-xl transition-all flex items-center justify-center gap-1.5 ${activeTab === 'partnerships' ? 'bg-black text-white shadow-lg' : 'text-gray-400 hover:text-black'}`}>
+                    <CreditCard size={12} /> Rateio
                 </button>
-                <button onClick={() => setActiveTab('projects')} className={`flex-1 py-3 text-[10px] font-black uppercase rounded-xl transition-all flex items-center justify-center gap-2 ${activeTab === 'projects' ? 'bg-black text-white shadow-xl' : 'text-gray-400 hover:text-black'}`}>
-                    <LayoutGrid size={14} /> Projetos
+                <button onClick={() => setActiveTab('projects')} className={`flex-1 py-1.5 text-[9px] font-black uppercase rounded-xl transition-all flex items-center justify-center gap-1.5 ${activeTab === 'projects' ? 'bg-black text-white shadow-lg' : 'text-gray-400 hover:text-black'}`}>
+                    <LayoutGrid size={12} /> Proj
                 </button>
             </div>
 
-            <div ref={captureRef} className="p-2">
+            <div ref={captureRef} className="flex-1 min-h-0">
                 <AnimatePresence mode="wait">
                     {activeTab === 'tools' && (
-                        <motion.div key="tools" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="bg-white rounded-[2rem] p-8 shadow-apple border border-gray-100 flex flex-col items-center">
-                                <h4 className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-8">Participação por Owner</h4>
-                                <div className="w-56 h-56 relative mb-8">
+                        <motion.div key="tools" initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }} className="grid grid-cols-1 md:grid-cols-2 gap-4 h-full">
+                            <div className="bg-white rounded-[1.5rem] p-4 md:p-5 shadow-apple border border-gray-100 flex flex-col items-center">
+                                <h4 className="text-[9px] font-black uppercase text-gray-400 tracking-widest mb-4">Participação por Responsável</h4>
+                                <div className="w-40 h-40 relative mb-4">
                                     <SimplePieChart data={stats.ownerData} colors={COLORS} />
-                                    <div className="absolute inset-0 flex items-center justify-center font-black text-lg">CUSTO</div>
+                                    <div className="absolute inset-0 flex items-center justify-center font-black text-[9px] text-gray-300">CUSTO</div>
                                 </div>
-                                <div className="grid grid-cols-2 gap-4 w-full">
+                                <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 w-full">
                                     {stats.ownerData.map((d, i) => (
-                                        <div key={i} className="flex justify-between items-center text-xs font-bold border-b pb-1">
-                                            <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full" style={{ background: COLORS[i % COLORS.length] }} /> {d.label}</span>
-                                            <span className="text-gray-400">{formatCurrency(d.value)}</span>
+                                        <div key={i} className="flex justify-between items-center text-[10px] font-bold border-b pb-0.5 border-gray-50">
+                                            <span className="flex items-center gap-1.5 truncate"><div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: COLORS[i % COLORS.length] }} /> {d.label}</span>
+                                            <span className="text-gray-400 shrink-0">{formatCurrency(d.value)}</span>
                                         </div>
                                     ))}
                                 </div>
                             </div>
-                            <div className="bg-white rounded-[2rem] p-8 shadow-apple border border-gray-100 flex flex-col justify-between">
-                                <h4 className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-4">Volume de Despesa Individual</h4>
-                                <SimpleBarChart data={[...tools, ...platforms].sort((a,b)=>b.value-a.value).slice(0, 12).map(i=>({label: i.name, value: i.value}))} color="#000" />
-                                <div className="mt-8 p-4 bg-zinc-50 rounded-2xl border border-zinc-100">
-                                    <p className="text-[10px] font-black uppercase text-zinc-400 mb-1">Custo Médio p/ Item</p>
-                                    <p className="text-3xl font-black">{formatCurrency(stats.totalExpenses / (tools.length + platforms.length || 1))}</p>
+                            <div className="bg-white rounded-[1.5rem] p-4 md:p-5 shadow-apple border border-gray-100 flex flex-col justify-between">
+                                <h4 className="text-[9px] font-black uppercase text-gray-400 tracking-widest mb-2">Maiores Custos</h4>
+                                <SimpleBarChart data={[...tools, ...platforms].sort((a,b)=>b.value-a.value).slice(0, 10).map(i=>({label: i.name, value: i.value}))} color="#000" height="h-28" />
+                                <div className="mt-4 p-3 bg-zinc-50 rounded-xl border border-zinc-100 flex justify-between items-center">
+                                    <div>
+                                        <p className="text-[8px] font-black uppercase text-zinc-400">Média p/ Item</p>
+                                        <p className="text-xl font-black">{formatCurrency(stats.totalExpenses / (tools.length + platforms.length || 1))}</p>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-[8px] font-black uppercase text-zinc-400">Itens Ativos</p>
+                                        <p className="text-xl font-black">{tools.length + platforms.length}</p>
+                                    </div>
                                 </div>
                             </div>
                         </motion.div>
                     )}
 
                     {activeTab === 'partnerships' && (
-                        <motion.div key="parts" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
-                            <div className="bg-white rounded-[2rem] p-8 shadow-apple border border-gray-100">
-                                <h4 className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-6">Ranking de Distribuição</h4>
-                                <div className="space-y-3">
+                        <motion.div key="parts" initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }} className="h-full">
+                            <div className="bg-white rounded-[1.5rem] p-4 md:p-5 shadow-apple border border-gray-100 h-full flex flex-col">
+                                <h4 className="text-[9px] font-black uppercase text-gray-400 tracking-widest mb-4">Ranking de Repasse</h4>
+                                <div className="space-y-2 overflow-y-auto custom-scrollbar flex-1 pr-1">
                                     {stats.partnerData.map((p, i) => (
-                                        <div key={i} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100 hover:shadow-lg transition-shadow">
-                                            <div className="flex items-center gap-4">
-                                                <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-black">{i + 1}</div>
-                                                <span className="font-black uppercase tracking-tight">{p.label}</span>
+                                        <div key={i} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100 hover:shadow-md transition-shadow">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-black text-xs">{i + 1}</div>
+                                                <span className="font-black text-xs uppercase tracking-tight">{p.label}</span>
                                             </div>
-                                            <span className="text-xl font-black text-blue-600">{formatCurrency(p.value)}</span>
+                                            <span className="text-base font-black text-blue-600">{formatCurrency(p.value)}</span>
                                         </div>
                                     ))}
+                                    {stats.partnerData.length === 0 && (
+                                        <div className="h-full flex items-center justify-center text-gray-300 font-bold text-xs uppercase italic">Sem repasses este mês</div>
+                                    )}
                                 </div>
                             </div>
                         </motion.div>
                     )}
 
                     {activeTab === 'projects' && (
-                        <motion.div key="projs" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <div className="bg-white rounded-[2rem] p-8 shadow-apple border border-gray-100 flex flex-col items-center col-span-1">
-                                <h4 className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-8">Saúde por Status</h4>
-                                <div className="w-48 h-48 relative">
+                        <motion.div key="projs" initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }} className="grid grid-cols-1 md:grid-cols-3 gap-4 h-full">
+                            <div className="bg-white rounded-[1.5rem] p-4 md:p-5 shadow-apple border border-gray-100 flex flex-col items-center col-span-1">
+                                <h4 className="text-[9px] font-black uppercase text-gray-400 tracking-widest mb-4">Saúde da Carteira</h4>
+                                <div className="w-36 h-36 relative">
                                     <SimplePieChart data={stats.statusData} colors={['#10b981', '#3b82f6', '#f59e0b', '#dc2626']} />
                                 </div>
-                                <div className="mt-8 space-y-2 w-full">
+                                <div className="mt-4 space-y-1 w-full">
                                     {stats.statusData.map((s, i) => (
-                                        <div key={i} className="flex justify-between items-center text-xs font-black uppercase tracking-tighter">
-                                            <span>{s.label}</span>
-                                            <span className="bg-gray-100 px-2 py-0.5 rounded-full">{s.value}</span>
+                                        <div key={i} className="flex justify-between items-center text-[10px] font-black uppercase tracking-tighter">
+                                            <span className="truncate mr-2">{s.label}</span>
+                                            <span className="bg-gray-100 px-1.5 py-0.5 rounded-full shrink-0">{s.value}</span>
                                         </div>
                                     ))}
                                 </div>
                             </div>
-                            <div className="bg-white rounded-[2rem] p-8 shadow-apple border border-gray-100 md:col-span-2 flex flex-col justify-between">
-                                <h4 className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-8">Valores por Contrato</h4>
-                                <SimpleBarChart data={stats.projectValues.slice(0, 10)} color="#10b981" />
-                                <div className="grid grid-cols-2 gap-4 mt-8">
-                                    <div className="p-4 border rounded-2xl bg-emerald-50 border-emerald-100">
-                                        <p className="text-[9px] font-black uppercase text-emerald-600">Ticket Médio</p>
-                                        <p className="text-2xl font-black text-emerald-700">{formatCurrency(stats.totalRevenue / (projects.length || 1))}</p>
+                            <div className="bg-white rounded-[1.5rem] p-4 md:p-5 shadow-apple border border-gray-100 md:col-span-2 flex flex-col justify-between h-full">
+                                <h4 className="text-[9px] font-black uppercase text-gray-400 tracking-widest mb-4">Volume por Contrato</h4>
+                                <SimpleBarChart data={stats.projectValues.slice(0, 15)} color="#10b981" height="h-32" />
+                                <div className="grid grid-cols-2 gap-3 mt-4">
+                                    <div className="p-3 border rounded-xl bg-emerald-50 border-emerald-100">
+                                        <p className="text-[8px] font-black uppercase text-emerald-600">Ticket Médio</p>
+                                        <p className="text-xl font-black text-emerald-700">{formatCurrency(stats.totalRevenue / (projects.length || 1))}</p>
                                     </div>
-                                    <div className="p-4 border rounded-2xl bg-blue-50 border-blue-100">
-                                        <p className="text-[9px] font-black uppercase text-blue-600">Projetos Ativos</p>
-                                        <p className="text-2xl font-black text-blue-700">{projects.length}</p>
+                                    <div className="p-3 border rounded-xl bg-blue-50 border-blue-100">
+                                        <p className="text-[8px] font-black uppercase text-blue-600">Projetos Ativos</p>
+                                        <p className="text-xl font-black text-blue-700">{projects.length}</p>
                                     </div>
                                 </div>
                             </div>
