@@ -93,6 +93,12 @@ export const AIToolsManager: React.FC = () => {
         }
     };
 
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter') {
+            handleAdd();
+        }
+    };
+
     const combinedList = [
         ...tools.map(t => ({ ...t, type: 'TOOL' as const })),
         ...platforms.map(p => ({ ...p, type: 'PLATFORM' as const }))
@@ -116,17 +122,17 @@ export const AIToolsManager: React.FC = () => {
                     </div>
 
                     <div className="space-y-3">
-                        <input type="text" value={newName} onChange={e => setNewName(e.target.value)} placeholder="Nome" className="w-full bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-black outline-none" />
-                        <input type="text" value={newDescription} onChange={e => setNewDescription(e.target.value)} placeholder="Descrição" className="w-full bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-black outline-none" />
-                        <select value={linkedProjectId} onChange={(e) => setLinkedProjectId(e.target.value)} className="w-full bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black appearance-none">
+                        <input type="text" value={newName} onKeyDown={handleKeyDown} onChange={e => setNewName(e.target.value)} placeholder="Nome" className="w-full bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-black outline-none" />
+                        <input type="text" value={newDescription} onKeyDown={handleKeyDown} onChange={e => setNewDescription(e.target.value)} placeholder="Descrição" className="w-full bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-black outline-none" />
+                        <select value={linkedProjectId} onKeyDown={handleKeyDown} onChange={(e) => setLinkedProjectId(e.target.value)} className="w-full bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black appearance-none">
                             <option value="">Vincular Projeto</option>
                             {projects.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
                         </select>
                         <div className="grid grid-cols-2 gap-3">
-                            <input type="text" value={newValue} onChange={e => setNewValue(formatCurrencyInput(e.target.value))} placeholder="Valor R$" className="w-full bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-black outline-none" />
-                            <input type="text" value={newDate} onChange={e => setNewDate(e.target.value.replace(/\D/g, ''))} placeholder="Dia Venc." className="w-full bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 text-sm text-center focus:ring-2 focus:ring-black outline-none" />
+                            <input type="text" value={newValue} onKeyDown={handleKeyDown} onChange={e => setNewValue(formatCurrencyInput(e.target.value))} placeholder="Valor R$" className="w-full bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-black outline-none" />
+                            <input type="text" value={newDate} onKeyDown={handleKeyDown} onChange={e => setNewDate(e.target.value.replace(/\D/g, ''))} placeholder="Dia Venc." className="w-full bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 text-sm text-center focus:ring-2 focus:ring-black outline-none" />
                         </div>
-                        <select value={newOwner} onChange={(e) => setNewOwner(e.target.value as any)} className="w-full bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black appearance-none">
+                        <select value={newOwner} onKeyDown={handleKeyDown} onChange={(e) => setNewOwner(e.target.value as any)} className="w-full bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black appearance-none">
                             <option value="CARRYON">CARRYON</option>
                             <option value="SPENCER">SPENCER</option>
                             <option value="JOI.A.">JOI.A.</option>

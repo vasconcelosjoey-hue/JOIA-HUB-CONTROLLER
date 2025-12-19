@@ -139,6 +139,12 @@ export const Dashboard: React.FC = () => {
       p.cnpj.includes(searchTerm)
   );
 
+  const handleKeyDown = (e: React.KeyboardEvent, action: () => void) => {
+    if (e.key === 'Enter') {
+        action();
+    }
+  };
+
   if (loading) {
       return (
           <div className="h-96 flex flex-col items-center justify-center text-gray-400 gap-4">
@@ -180,36 +186,83 @@ export const Dashboard: React.FC = () => {
                           <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleLogoUpload} />
                           <div className="flex-1 w-full">
                               <label className="text-[10px] font-bold text-gray-400 uppercase">Nome da Empresa</label>
-                              <input type="text" value={editingProject.nome} onChange={e => setEditingProject({...editingProject, nome: e.target.value})} className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 font-black text-base focus:ring-2 focus:ring-black outline-none" />
+                              <input 
+                                type="text" 
+                                value={editingProject.nome} 
+                                onKeyDown={(e) => handleKeyDown(e, handleSaveEdit)}
+                                onChange={e => setEditingProject({...editingProject, nome: e.target.value})} 
+                                className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 font-black text-base focus:ring-2 focus:ring-black outline-none" 
+                              />
                           </div>
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                           <div className="space-y-4">
                                 <h4 className="text-xs font-black text-black uppercase border-b border-gray-200 pb-1.5">Dados Cadastrais</h4>
-                                <input type="text" value={editingProject.cnpj} onChange={e => setEditingProject({...editingProject, cnpj: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm" placeholder="CNPJ" />
+                                <input 
+                                    type="text" 
+                                    value={editingProject.cnpj} 
+                                    onKeyDown={(e) => handleKeyDown(e, handleSaveEdit)}
+                                    onChange={e => setEditingProject({...editingProject, cnpj: e.target.value})} 
+                                    className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm" 
+                                    placeholder="CNPJ" 
+                                />
                                 <div className="flex gap-2">
-                                    <input type="text" value={editingProject.website || ''} onChange={e => setEditingProject({...editingProject, website: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm" placeholder="Website" />
+                                    <input 
+                                        type="text" 
+                                        value={editingProject.website || ''} 
+                                        onKeyDown={(e) => handleKeyDown(e, handleSaveEdit)}
+                                        onChange={e => setEditingProject({...editingProject, website: e.target.value})} 
+                                        className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm" 
+                                        placeholder="Website" 
+                                    />
                                     {editingProject.website && <button onClick={() => openWebsite(editingProject.website)} className="bg-blue-50 text-blue-600 p-2 rounded-lg"><ExternalLink size={16} /></button>}
                                 </div>
                                 <div className="flex gap-2">
-                                    <input type="text" value={editingProject.address || ''} onChange={e => setEditingProject({...editingProject, address: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm" placeholder="Endereço ou Link Maps" />
+                                    <input 
+                                        type="text" 
+                                        value={editingProject.address || ''} 
+                                        onKeyDown={(e) => handleKeyDown(e, handleSaveEdit)}
+                                        onChange={e => setEditingProject({...editingProject, address: e.target.value})} 
+                                        className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm" 
+                                        placeholder="Endereço ou Link Maps" 
+                                    />
                                     {editingProject.address && <button onClick={() => openGoogleMapsRoute(editingProject.address)} className="bg-green-50 text-green-600 p-2 rounded-lg"><Navigation size={16} /></button>}
                                 </div>
                           </div>
                           <div className="space-y-4">
                                 <h4 className="text-xs font-black text-black uppercase border-b border-gray-200 pb-1.5">Contato & Financeiro</h4>
-                                <input type="text" value={editingProject.supervisorName} onChange={e => setEditingProject({...editingProject, supervisorName: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm" placeholder="Supervisor" />
+                                <input 
+                                    type="text" 
+                                    value={editingProject.supervisorName} 
+                                    onKeyDown={(e) => handleKeyDown(e, handleSaveEdit)}
+                                    onChange={e => setEditingProject({...editingProject, supervisorName: e.target.value})} 
+                                    className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm" 
+                                    placeholder="Supervisor" 
+                                />
                                 <div className="flex gap-2">
-                                    <input type="text" value={editingProject.supervisorContact} onChange={e => setEditingProject({...editingProject, supervisorContact: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm" placeholder="Contato" />
+                                    <input 
+                                        type="text" 
+                                        value={editingProject.supervisorContact} 
+                                        onKeyDown={(e) => handleKeyDown(e, handleSaveEdit)}
+                                        onChange={e => setEditingProject({...editingProject, supervisorContact: e.target.value})} 
+                                        className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm" 
+                                        placeholder="Contato" 
+                                    />
                                     {editingProject.supervisorContact && <button onClick={() => openWhatsApp(editingProject.supervisorContact)} className="bg-emerald-50 text-emerald-600 p-2 rounded-lg"><MessageCircle size={16} /></button>}
                                 </div>
                                 <div className="relative">
-                                    <input type="text" value={editValStr} onChange={e => {
-                                        const formatted = formatCurrencyInput(e.target.value);
-                                        setEditValStr(formatted);
-                                        setEditingProject({...editingProject, valorContrato: parseCurrencyInput(formatted)})
-                                    }} className="w-full bg-gray-50 border border-gray-200 rounded-lg pl-8 pr-4 py-2 font-black text-base outline-none" />
+                                    <input 
+                                        type="text" 
+                                        value={editValStr} 
+                                        onKeyDown={(e) => handleKeyDown(e, handleSaveEdit)}
+                                        onChange={e => {
+                                            const formatted = formatCurrencyInput(e.target.value);
+                                            setEditValStr(formatted);
+                                            setEditingProject({...editingProject, valorContrato: parseCurrencyInput(formatted)})
+                                        }} 
+                                        className="w-full bg-gray-50 border border-gray-200 rounded-lg pl-8 pr-4 py-2 font-black text-base outline-none" 
+                                    />
                                     <span className="absolute left-3 top-2.5 text-gray-400 text-xs font-bold">R$</span>
                                 </div>
                           </div>
@@ -230,7 +283,14 @@ export const Dashboard: React.FC = () => {
          <div className="bg-white rounded-2xl p-5 shadow-float border border-gray-200 animate-in slide-in-from-top-10 mb-6">
             <h3 className="text-xs font-black text-gray-400 uppercase tracking-wider mb-4 border-b border-gray-100 pb-2">Novo Contrato</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <input type="text" value={newName} onChange={e => setNewName(e.target.value)} placeholder="NOME DA EMPRESA" className="w-full bg-gray-50 border border-gray-300 rounded-lg px-3 py-2.5 text-black font-bold focus:ring-2 focus:ring-black outline-none transition-all text-sm" />
+                <input 
+                    type="text" 
+                    value={newName} 
+                    onKeyDown={(e) => handleKeyDown(e, handleAddProject)}
+                    onChange={e => setNewName(e.target.value)} 
+                    placeholder="NOME DA EMPRESA" 
+                    className="w-full bg-gray-50 border border-gray-300 rounded-lg px-3 py-2.5 text-black font-bold focus:ring-2 focus:ring-black outline-none transition-all text-sm" 
+                />
                 <div className="md:col-span-2 lg:col-span-3 pt-2">
                     <button onClick={handleAddProject} disabled={isSubmitting} className="w-full bg-black text-white py-3 rounded-lg font-black uppercase tracking-widest text-xs disabled:opacity-50 flex items-center justify-center gap-2">
                         {isSubmitting ? 'Registrando...' : 'Confirmar Cadastro'}

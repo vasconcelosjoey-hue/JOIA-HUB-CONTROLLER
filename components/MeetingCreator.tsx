@@ -26,6 +26,7 @@ export const MeetingCreator: React.FC<MeetingCreatorProps> = () => {
     const isGCalConnected = settings?.gcal_connected ?? false;
 
     const handleGenerate = () => {
+        if (!title || !date || !time || !smartBoxContent) return;
         setIsThinking(true);
         setTimeout(() => {
             const text = `🗓 **CONVITE: ${title}**\n\nOlá time,\n\nGostaria de agendar a seguinte reunião: **${title}**.\n\n**Pauta / Assuntos:**\n${smartBoxContent}\n\n📍 **Detalhes:**\nData: ${date.split('-').reverse().join('/')}\nHorário: ${time}\nDuração: ${duration} min\nLink: Google Meet (Automático no Evento)\n\nConto com a presença de todos.`;
@@ -61,6 +62,12 @@ export const MeetingCreator: React.FC<MeetingCreatorProps> = () => {
         setSettings({ gcal_connected: !isGCalConnected });
     };
 
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter') {
+            handleGenerate();
+        }
+    };
+
     return (
         <div className="max-w-4xl mx-auto animate-in fade-in duration-500">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
@@ -71,6 +78,7 @@ export const MeetingCreator: React.FC<MeetingCreatorProps> = () => {
                             <input 
                                 type="text"
                                 value={title}
+                                onKeyDown={handleKeyDown}
                                 onChange={(e) => setTitle(e.target.value)}
                                 className="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 text-black font-bold focus:outline-none focus:ring-2 focus:ring-black transition-all text-sm"
                                 placeholder="Pauta da conversa..."
@@ -83,6 +91,7 @@ export const MeetingCreator: React.FC<MeetingCreatorProps> = () => {
                                 <input 
                                     type="date"
                                     value={date}
+                                    onKeyDown={handleKeyDown}
                                     onChange={(e) => setDate(e.target.value)}
                                     className="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-3 text-black font-bold focus:outline-none focus:ring-2 focus:ring-black transition-all text-sm"
                                 />
@@ -92,6 +101,7 @@ export const MeetingCreator: React.FC<MeetingCreatorProps> = () => {
                                 <input 
                                     type="time"
                                     value={time}
+                                    onKeyDown={handleKeyDown}
                                     onChange={(e) => setTime(e.target.value)}
                                     className="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-3 text-black font-bold focus:outline-none focus:ring-2 focus:ring-black transition-all text-sm"
                                 />
