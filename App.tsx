@@ -47,7 +47,7 @@ function App() {
       case 'balance': return <BalanceManager />;
       case 'meetings': return <MeetingCreator onBack={() => {}} />;
       case 'ai-tools': return <AIToolsManager />;
-      case 'partnership': return <PartnershipManager cards={[]} onAddCard={() => {}} onDeleteCard={() => {}} />;
+      case 'partnership': return <PartnershipManager />;
       default: return <Dashboard />;
     }
   };
@@ -67,7 +67,7 @@ function App() {
         <aside className="hidden md:flex w-60 bg-white border-r border-gray-200 flex-col shrink-0 z-20">
           <div className="flex flex-col h-full">
             <div className="h-20 flex items-center justify-center px-4 border-b border-gray-100">
-               <img src="/logo.png" alt="CarryOn" className="max-h-12 w-auto object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling?.classList.remove('hidden'); }} />
+               <img src="/logo.svg" alt="CarryOn" className="max-h-12 w-auto object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling?.classList.remove('hidden'); }} />
                <span className="hidden font-black text-xl text-black">CarryOn</span>
             </div>
 
@@ -117,7 +117,6 @@ function App() {
 
           <main className="flex-1 overflow-y-auto p-4 md:p-6 custom-scrollbar pb-24 md:pb-8">
             <div className="max-w-6xl mx-auto h-full">
-               {/* Redundant mobile title removed from here as it is already in the sticky header */}
                {renderContent()}
             </div>
           </main>
