@@ -1,23 +1,20 @@
+
 import React, { useState } from 'react';
-import { Plus, Trash2, Calculator, Save, Building2, Loader2, ChevronDown, ChevronUp, Search } from 'lucide-react';
+import { Plus, Trash2, Calculator, Save, Building2, Loader2, ChevronDown, ChevronUp, Search, Edit2, X, Check } from 'lucide-react';
 import { formatCurrency } from '../services/utils';
 import { Partner, PartnershipCard } from '../types';
 import { useFirestoreCollection } from '../hooks/useFirestore';
 import { useToast } from '../context/ToastContext';
 
-interface PartnershipManagerProps {
-    cards: PartnershipCard[];
-    onAddCard: (card: PartnershipCard) => void;
-    onDeleteCard: (id: string) => void;
-}
-
-export const PartnershipManager: React.FC<PartnershipManagerProps> = () => {
-    const { data: cards, loading, addItem, deleteItem } = useFirestoreCollection<PartnershipCard>('partnerships');
+export const PartnershipManager: React.FC = () => {
+    const { data: cards, loading, addItem, updateItem, deleteItem } = useFirestoreCollection<PartnershipCard>('partnerships');
     const { addToast } = useToast();
 
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
+    const [editingCard, setEditingCard] = useState<PartnershipCard | null>(null);
+    const [isSaving, setIsSaving] = useState(false);
 
     const [companyName, setCompanyName] = useState('');
     const [totalValue, setTotalValue] = useState<string>('');
@@ -27,7 +24,7 @@ export const PartnershipManager: React.FC<PartnershipManagerProps> = () => {
     const [partners, setPartners] = useState<Partner[]>([{ id: generateId(), name: '', value: 0 }]);
 
     const numericTotal = parseFloat(totalValue) || 0;
-    const distributedTotal = partners.reduce((acc, p) => acc + p.value, 0);
+    const distributedTotal = partners.reduce((acc, p) => acc + (p.value || 0), 0);
     const difference = numericTotal - distributedTotal;
     const isBalanced = Math.abs(difference) < 0.05;
 
@@ -46,20 +43,18 @@ export const PartnershipManager: React.FC<PartnershipManagerProps> = () => {
         setPartners(partners.map(p => p.id === id ? { ...p, [field]: field === 'value' ? (parseFloat(val) || 0) : val } : p));
     };
 
-    const autoDistribute = () => {
-        if (numericTotal <= 0 || partners.length === 0) return;
-        const share = numericTotal / partners.length;
+    const autoDistribute = (targetTotal: number, targetPartners: Partner[]) => {
+        if (targetTotal <= 0 || targetPartners.length === 0) return targetPartners;
+        const share = targetTotal / targetPartners.length;
         const floorShare = Math.floor(share * 100) / 100;
-        const newPartners = partners.map((p, index) => {
+        return targetPartners.map((p, index) => {
             let val = floorShare;
-            if (index === partners.length - 1) {
-                const currentSum = floorShare * partners.length;
-                const diff = numericTotal - currentSum;
-                val = floorShare + diff;
+            if (index === targetPartners.length - 1) {
+                const currentSum = floorShare * (targetPartners.length - 1);
+                val = Math.round((targetTotal - currentSum) * 100) / 100;
             }
             return { ...p, value: val };
         });
-        setPartners(newPartners);
     };
 
     const handleSaveCard = async () => {
@@ -89,6 +84,26 @@ export const PartnershipManager: React.FC<PartnershipManagerProps> = () => {
         }
     };
 
+    const handleUpdateCard = async () => {
+        if (!editingCard) return;
+        const editTotal = editingCard.totalValue;
+        const editDist = editingCard.partners.reduce((acc, p) => acc + (p.value || 0), 0);
+        if (Math.abs(editTotal - editDist) > 0.05) {
+            addToast('O rateio da edição não está balanceado.', 'warning');
+            return;
+        }
+        setIsSaving(true);
+        try {
+            await updateItem(editingCard.id, editingCard);
+            addToast('Parceria atualizada!', 'success');
+            setEditingCard(null);
+        } catch (err) {
+            addToast('Erro ao atualizar.', 'error');
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
     const handleConfirmDelete = async (id: string, e: React.MouseEvent) => {
         e.stopPropagation();
         if (window.confirm('Excluir esta parceria?')) {
@@ -97,9 +112,9 @@ export const PartnershipManager: React.FC<PartnershipManagerProps> = () => {
         }
     }
 
-    const handleKeyDown = (e: React.KeyboardEvent) => {
+    const handleKeyDown = (e: React.KeyboardEvent, action: () => void) => {
         if (e.key === 'Enter') {
-            handleSaveCard();
+            action();
         }
     };
 
@@ -107,6 +122,78 @@ export const PartnershipManager: React.FC<PartnershipManagerProps> = () => {
 
     return (
         <div className="space-y-6 animate-in fade-in duration-500 pb-20 md:pb-0">
+            {/* Modal de Edição */}
+            {editingCard && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
+                    <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col border border-gray-100 overflow-hidden">
+                        <div className="p-6 border-b flex justify-between items-center bg-gray-50">
+                            <h3 className="font-black text-sm uppercase tracking-widest flex items-center gap-2">
+                                <Edit2 size={16} /> Editar Parceria
+                            </h3>
+                            <button onClick={() => setEditingCard(null)} className="p-2 hover:bg-gray-200 rounded-full transition-colors"><X size={20} /></button>
+                        </div>
+                        <div className="p-6 space-y-5 overflow-y-auto custom-scrollbar flex-1">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-bold text-gray-400 uppercase">Empresa</label>
+                                    <input type="text" value={editingCard.companyName} onKeyDown={(e) => handleKeyDown(e, handleUpdateCard)} onChange={e => setEditingCard({...editingCard, companyName: e.target.value})} className="w-full border rounded-xl px-4 py-2.5 font-bold focus:ring-2 focus:ring-black outline-none" />
+                                </div>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-bold text-gray-400 uppercase">Valor</label>
+                                        <input type="number" value={editingCard.totalValue} onKeyDown={(e) => handleKeyDown(e, handleUpdateCard)} onChange={e => setEditingCard({...editingCard, totalValue: parseFloat(e.target.value) || 0})} className="w-full border rounded-xl px-4 py-2.5 font-black focus:ring-2 focus:ring-black outline-none" />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-bold text-gray-400 uppercase">Dia Pag.</label>
+                                        <input type="number" value={editingCard.dueDay} onKeyDown={(e) => handleKeyDown(e, handleUpdateCard)} onChange={e => setEditingCard({...editingCard, dueDay: parseInt(e.target.value) || 1})} className="w-full border rounded-xl px-4 py-2.5 font-bold focus:ring-2 focus:ring-black outline-none text-center" />
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="bg-gray-50 rounded-2xl p-4 border border-gray-200 space-y-4">
+                                <div className="flex justify-between items-center">
+                                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Rateio dos Beneficiários</label>
+                                    <button 
+                                        onClick={() => setEditingCard({...editingCard, partners: autoDistribute(editingCard.totalValue, editingCard.partners)})} 
+                                        className="text-[10px] font-black bg-black text-white px-3 py-1 rounded-lg"
+                                    >
+                                        RE-CALCULAR
+                                    </button>
+                                </div>
+                                <div className="space-y-3">
+                                    {editingCard.partners.map((p, idx) => (
+                                        <div key={p.id} className="flex gap-2 items-center">
+                                            <input type="text" value={p.name} onChange={e => {
+                                                const newPartners = [...editingCard.partners];
+                                                newPartners[idx].name = e.target.value;
+                                                setEditingCard({...editingCard, partners: newPartners});
+                                            }} placeholder="Nome" className="flex-1 bg-white border rounded-xl px-3 py-2 text-xs font-bold focus:border-black outline-none" />
+                                            <input type="number" value={p.value} onChange={e => {
+                                                const newPartners = [...editingCard.partners];
+                                                newPartners[idx].value = parseFloat(e.target.value) || 0;
+                                                setEditingCard({...editingCard, partners: newPartners});
+                                            }} placeholder="Valor" className="w-24 bg-white border rounded-xl px-3 py-2 text-xs font-bold focus:border-black outline-none" />
+                                            <button onClick={() => {
+                                                const newPartners = editingCard.partners.filter((_, i) => i !== idx);
+                                                setEditingCard({...editingCard, partners: newPartners});
+                                            }} className="text-gray-300 hover:text-red-500 p-1"><Trash2 size={16} /></button>
+                                        </div>
+                                    ))}
+                                    <button onClick={() => setEditingCard({...editingCard, partners: [...editingCard.partners, {id: generateId(), name: '', value: 0}]})} className="w-full py-2 border-2 border-dashed border-gray-300 rounded-xl text-gray-400 font-bold text-[10px] uppercase hover:border-black hover:text-black flex items-center justify-center gap-2 transition-all">
+                                        <Plus size={14} /> Adicionar Beneficiário
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="p-4 bg-gray-50 flex justify-end gap-2 shrink-0">
+                            <button onClick={() => setEditingCard(null)} className="px-5 py-2.5 font-bold text-gray-500 hover:bg-gray-200 rounded-xl">Cancelar</button>
+                            <button onClick={handleUpdateCard} disabled={isSaving} className="bg-black text-white px-6 py-2.5 rounded-xl font-black uppercase text-xs flex items-center gap-2 shadow-lg hover:bg-gray-800 disabled:opacity-50">
+                                {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} Atualizar Parceria
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
                 <div className="bg-white rounded-[2rem] p-6 shadow-float border border-gray-200 relative overflow-hidden">
                     <div className="absolute top-0 left-0 w-full h-1.5 bg-black"></div>
@@ -114,25 +201,25 @@ export const PartnershipManager: React.FC<PartnershipManagerProps> = () => {
                     <div className="space-y-5">
                         <div className="space-y-1.5">
                             <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Projeto / Empresa</label>
-                            <input type="text" value={companyName} onKeyDown={handleKeyDown} onChange={e => setCompanyName(e.target.value)} placeholder="Nome" className="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 text-black font-bold focus:ring-2 focus:ring-black outline-none text-sm" />
+                            <input type="text" value={companyName} onKeyDown={(e) => handleKeyDown(e, handleSaveCard)} onChange={e => setCompanyName(e.target.value)} placeholder="Nome" className="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 text-black font-bold focus:ring-2 focus:ring-black outline-none text-sm" />
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-1.5">
                                 <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Valor R$</label>
-                                <input type="number" value={totalValue} onKeyDown={handleKeyDown} onChange={e => setTotalValue(e.target.value)} placeholder="0.00" className="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 text-black font-bold focus:ring-2 focus:ring-black outline-none text-sm" />
+                                <input type="number" value={totalValue} onKeyDown={(e) => handleKeyDown(e, handleSaveCard)} onChange={e => setTotalValue(e.target.value)} placeholder="0.00" className="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 text-black font-bold focus:ring-2 focus:ring-black outline-none text-sm" />
                             </div>
                             <div className="space-y-1.5">
                                 <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Dia Pag.</label>
-                                <input type="text" value={dueDay} onKeyDown={handleKeyDown} onChange={e => setDueDay(e.target.value.replace(/\D/g, ''))} placeholder="DD" className="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 text-black font-bold focus:ring-2 focus:ring-black outline-none text-sm text-center" />
+                                <input type="text" value={dueDay} onKeyDown={(e) => handleKeyDown(e, handleSaveCard)} onChange={e => setDueDay(e.target.value.replace(/\D/g, ''))} placeholder="DD" className="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 text-black font-bold focus:ring-2 focus:ring-black outline-none text-sm text-center" />
                             </div>
                         </div>
                         <div className="bg-gray-50 rounded-2xl p-4 border border-gray-200 space-y-4">
-                            <div className="flex justify-between items-center"><label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Distribuição</label><button onClick={autoDistribute} className="text-[10px] font-black bg-black text-white px-3 py-1 rounded-lg shadow-sm">AUTO RATEIO</button></div>
+                            <div className="flex justify-between items-center"><label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Distribuição</label><button onClick={() => setPartners(autoDistribute(numericTotal, partners))} className="text-[10px] font-black bg-black text-white px-3 py-1 rounded-lg shadow-sm">AUTO RATEIO</button></div>
                             <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1 custom-scrollbar">
                                 {partners.map((partner) => (
                                     <div key={partner.id} className="flex gap-2 items-center animate-in slide-in-from-left-2">
-                                        <input type="text" value={partner.name} onKeyDown={handleKeyDown} onChange={(e) => updatePartner(partner.id, 'name', e.target.value)} placeholder="Sócio" className="flex-1 bg-white border border-gray-200 rounded-xl px-3 py-2.5 text-xs font-bold focus:border-black outline-none shadow-sm" />
-                                        <input type="number" value={partner.value || ''} onKeyDown={handleKeyDown} onChange={(e) => updatePartner(partner.id, 'value', e.target.value)} placeholder="0.00" className="w-24 bg-white border border-gray-200 rounded-xl px-3 py-2.5 text-xs font-bold focus:border-black outline-none shadow-sm" />
+                                        <input type="text" value={partner.name} onKeyDown={(e) => handleKeyDown(e, handleSaveCard)} onChange={(e) => updatePartner(partner.id, 'name', e.target.value)} placeholder="Sócio" className="flex-1 bg-white border border-gray-200 rounded-xl px-3 py-2.5 text-xs font-bold focus:border-black outline-none shadow-sm" />
+                                        <input type="number" value={partner.value || ''} onKeyDown={(e) => handleKeyDown(e, handleSaveCard)} onChange={(e) => updatePartner(partner.id, 'value', e.target.value)} placeholder="0.00" className="w-24 bg-white border border-gray-200 rounded-xl px-3 py-2.5 text-xs font-bold focus:border-black outline-none shadow-sm" />
                                         <button onClick={() => handleRemovePartnerInput(partner.id)} className="text-gray-300 hover:text-red-500 p-1.5"><Trash2 size={16} /></button>
                                     </div>
                                 ))}
@@ -154,7 +241,10 @@ export const PartnershipManager: React.FC<PartnershipManagerProps> = () => {
                     <div className="grid grid-cols-1 gap-4 overflow-y-auto max-h-[70vh] custom-scrollbar pr-2">
                         {filteredCards.map(card => (
                             <div key={card.id} onClick={() => toggleCard(card.id)} className="bg-white rounded-3xl p-5 shadow-apple hover:shadow-float transition-all border border-gray-100 group relative cursor-pointer animate-in fade-in">
-                                <button onClick={(e) => handleConfirmDelete(card.id, e)} className="absolute top-5 right-5 text-gray-200 hover:text-red-500 z-20 p-1.5 transition-colors"><Trash2 size={18} /></button>
+                                <div className="absolute top-5 right-5 flex gap-1 z-20">
+                                    <button onClick={(e) => { e.stopPropagation(); setEditingCard(card); }} className="text-gray-200 hover:text-black p-1.5 transition-colors"><Edit2 size={18} /></button>
+                                    <button onClick={(e) => handleConfirmDelete(card.id, e)} className="text-gray-200 hover:text-red-500 p-1.5 transition-colors"><Trash2 size={18} /></button>
+                                </div>
                                 <div className="flex items-center gap-4">
                                     <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center border border-gray-100 shrink-0"><Building2 size={24} className="text-gray-400" /></div>
                                     <div className="flex-1 truncate">

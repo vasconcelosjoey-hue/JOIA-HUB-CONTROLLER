@@ -1,3 +1,4 @@
+
 import React, { useMemo, useRef, useState } from 'react';
 import { useFirestoreCollection } from '../hooks/useFirestore';
 import { Project, AITool, Platform, PartnershipCard } from '../types';
@@ -79,26 +80,35 @@ export const BalanceManager: React.FC = () => {
     const loading = loadProjects || loadTools || loadPlatforms || loadPartnerships;
 
     const stats = useMemo(() => {
-        const totalRevenue = projects.reduce((acc, curr) => acc + (curr.valorContrato || 0), 0);
-        const totalToolsCost = tools.reduce((acc, curr) => acc + (curr.value || 0), 0);
-        const totalPlatformsCost = platforms.reduce((acc, curr) => acc + (curr.value || 0), 0);
+        // Cálculo de Receita Real: Soma de todos os contratos ativos
+        const totalRevenue = projects.reduce((acc, curr) => acc + (Number(curr.valorContrato) || 0), 0);
+        
+        // Cálculo de Custo Real: Soma de todas as ferramentas e plataformas registradas
+        const totalToolsCost = tools.reduce((acc, curr) => acc + (Number(curr.value) || 0), 0);
+        const totalPlatformsCost = platforms.reduce((acc, curr) => acc + (Number(curr.value) || 0), 0);
         const totalExpenses = totalToolsCost + totalPlatformsCost;
         
+        // Lucro Líquido Real
+        const netProfit = totalRevenue - totalExpenses;
+        
         const partnerPayouts: Record<string, number> = {};
-        partnerships.forEach(p => p.partners.forEach(pt => partnerPayouts[pt.name] = (partnerPayouts[pt.name] || 0) + pt.value));
+        partnerships.forEach(p => p.partners.forEach(pt => partnerPayouts[pt.name] = (partnerPayouts[pt.name] || 0) + (Number(pt.value) || 0)));
 
         const ownerCosts: Record<string, number> = {};
-        [...tools, ...platforms].forEach(item => ownerCosts[item.owner || 'OUTROS'] = (ownerCosts[item.owner || 'OUTROS'] || 0) + item.value);
+        [...tools, ...platforms].forEach(item => {
+            const ownerKey = item.owner || 'OUTROS';
+            ownerCosts[ownerKey] = (ownerCosts[ownerKey] || 0) + (Number(item.value) || 0);
+        });
 
         const statusDistribution: Record<string, number> = {};
         projects.forEach(p => statusDistribution[p.status] = (statusDistribution[p.status] || 0) + 1);
 
         return {
-            totalRevenue, totalExpenses, netProfit: totalRevenue - totalExpenses,
+            totalRevenue, totalExpenses, netProfit,
             ownerData: Object.entries(ownerCosts).map(([label, value]) => ({ label, value })),
             partnerData: Object.entries(partnerPayouts).map(([label, value]) => ({ label, value })).sort((a,b) => b.value - a.value),
             statusData: Object.entries(statusDistribution).map(([label, value]) => ({ label, value })),
-            projectValues: projects.map(p => ({ label: p.nome, value: p.valorContrato })).sort((a,b) => b.value - a.value)
+            projectValues: projects.map(p => ({ label: p.nome, value: Number(p.valorContrato) || 0 })).sort((a,b) => b.value - a.value)
         };
     }, [projects, tools, platforms, partnerships]);
 
@@ -176,9 +186,9 @@ export const BalanceManager: React.FC = () => {
                         <motion.div key="tools" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.98 }} transition={{ duration: 0.2 }} className="grid grid-cols-1 md:grid-cols-2 gap-4 h-full">
                             <div className="bg-white rounded-[2rem] p-5 md:p-6 shadow-apple border border-gray-100 flex flex-col items-center">
                                 <h4 className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-6">Rateio por Responsável</h4>
-                                <div className="w-40 h-40 relative mb-6">
+                                <div className="w-36 h-36 relative mb-6">
                                     <SimplePieChart data={stats.ownerData} colors={COLORS} />
-                                    <div className="absolute inset-0 flex items-center justify-center font-black text-[10px] text-gray-400 opacity-30">NET COST</div>
+                                    <div className="absolute inset-0 flex items-center justify-center font-black text-[10px] text-gray-400 opacity-30 uppercase">Custos</div>
                                 </div>
                                 <div className="grid grid-cols-2 gap-x-6 gap-y-2 w-full overflow-y-auto max-h-32 custom-scrollbar">
                                     {stats.ownerData.map((d, i) => (
@@ -191,14 +201,14 @@ export const BalanceManager: React.FC = () => {
                             </div>
                             <div className="bg-white rounded-[2rem] p-5 md:p-6 shadow-apple border border-gray-100 flex flex-col justify-between">
                                 <h4 className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-4">Análise de Intensidade (Custos)</h4>
-                                <SimpleBarChart data={[...tools, ...platforms].sort((a,b)=>b.value-a.value).slice(0, 12).map(i=>({label: i.name, value: i.value}))} color="#000" height="h-24" />
+                                <SimpleBarChart data={[...tools, ...platforms].sort((a,b)=>Number(b.value)-Number(a.value)).slice(0, 12).map(i=>({label: i.name, value: Number(i.value)}))} color="#000" height="h-24" />
                                 <div className="mt-4 p-4 bg-zinc-50 rounded-2xl border border-zinc-100 flex justify-between items-center">
                                     <div>
-                                        <p className="text-[9px] font-black uppercase text-zinc-400 mb-1">Média p/ Ativo</p>
+                                        <p className="text-[9px] font-black uppercase text-zinc-400 mb-1">Custo Médio p/ Ativo</p>
                                         <p className="text-2xl font-black text-black">{formatCurrency(stats.totalExpenses / (tools.length + platforms.length || 1))}</p>
                                     </div>
                                     <div className="text-right">
-                                        <p className="text-[9px] font-black uppercase text-zinc-400 mb-1">Itens Ativos</p>
+                                        <p className="text-[9px] font-black uppercase text-zinc-400 mb-1">Ativos Lançados</p>
                                         <p className="text-2xl font-black text-black">{tools.length + platforms.length}</p>
                                     </div>
                                 </div>
@@ -209,7 +219,7 @@ export const BalanceManager: React.FC = () => {
                     {activeTab === 'partnerships' && (
                         <motion.div key="parts" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.98 }} transition={{ duration: 0.2 }} className="h-full">
                             <div className="bg-white rounded-[2rem] p-5 md:p-6 shadow-apple border border-gray-100 h-full flex flex-col overflow-hidden">
-                                <h4 className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-6">Ranking de Repasse Líquido</h4>
+                                <h4 className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-6">Ranking de Repasse HUB</h4>
                                 <div className="space-y-3 overflow-y-auto custom-scrollbar flex-1 pr-1">
                                     {stats.partnerData.map((p, i) => (
                                         <div key={i} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100 hover:shadow-lg transition-all">
@@ -234,8 +244,8 @@ export const BalanceManager: React.FC = () => {
                     {activeTab === 'projects' && (
                         <motion.div key="projs" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.98 }} transition={{ duration: 0.2 }} className="grid grid-cols-1 md:grid-cols-3 gap-4 h-full">
                             <div className="bg-white rounded-[2rem] p-5 md:p-6 shadow-apple border border-gray-100 flex flex-col items-center col-span-1">
-                                <h4 className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-6">Distribuição de Status</h4>
-                                <div className="w-36 h-36 relative">
+                                <h4 className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-6">Distribuição Operacional</h4>
+                                <div className="w-32 h-32 relative">
                                     <SimplePieChart data={stats.statusData} colors={['#10b981', '#3b82f6', '#f59e0b', '#dc2626']} />
                                 </div>
                                 <div className="mt-6 space-y-1.5 w-full overflow-y-auto max-h-32 custom-scrollbar pr-1">
@@ -248,8 +258,8 @@ export const BalanceManager: React.FC = () => {
                                 </div>
                             </div>
                             <div className="bg-white rounded-[2rem] p-5 md:p-6 shadow-apple border border-gray-100 md:col-span-2 flex flex-col justify-between h-full">
-                                <h4 className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-6">Curva de Receita por Contrato</h4>
-                                <SimpleBarChart data={stats.projectValues.slice(0, 16)} color="#10b981" height="h-28" />
+                                <h4 className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-6">Concentração de Faturamento p/ Cliente</h4>
+                                <SimpleBarChart data={stats.projectValues.slice(0, 16)} color="#10b981" height="h-24" />
                                 <div className="grid grid-cols-2 gap-4 mt-6">
                                     <div className="p-4 border rounded-2xl bg-emerald-50 border-emerald-100 shadow-sm">
                                         <p className="text-[9px] font-black uppercase text-emerald-600 mb-1">Ticket Médio HUB</p>
