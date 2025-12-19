@@ -1,6 +1,5 @@
-
 import React, { useState } from 'react';
-import { Bot, Plus, Trash2, Calendar, DollarSign, Loader2, User, Layers, Briefcase, Building2, Search, FileText, Edit2, Check, X } from 'lucide-react';
+import { Bot, Plus, Trash2, DollarSign, Loader2, Layers, Search, Edit2, Check } from 'lucide-react';
 import { formatCurrency, formatCurrencyInput, parseCurrencyInput } from '../services/utils';
 import { useFirestoreCollection } from '../hooks/useFirestore';
 import { CpuArchitecture } from './ui/cpu-architecture';
@@ -100,7 +99,6 @@ export const AIToolsManager: React.FC = () => {
     ].sort((a, b) => b.value - a.value);
 
     const filteredList = combinedList.filter(item => {
-        const linkedProjectName = item.linkedProjectId ? projects.find(p => p.id === item.linkedProjectId)?.nome : '';
         const searchLower = searchTerm.toLowerCase();
         return item.name.toLowerCase().includes(searchLower) || (item.description && item.description.toLowerCase().includes(searchLower));
     });
@@ -108,84 +106,73 @@ export const AIToolsManager: React.FC = () => {
     const totalCost = filteredList.reduce((acc, curr) => acc + curr.value, 0);
 
     return (
-        <div className="space-y-6 animate-in slide-in-from-right duration-500">
-             <div className="relative overflow-hidden text-center md:text-left">
-                <div className="absolute right-0 top-1/2 -translate-y-1/2 w-[250px] h-[120px] opacity-10 pointer-events-none hidden md:block">
-                    <CpuArchitecture text="CORE" />
-                </div>
-                <h2 className="text-2xl md:text-3xl font-black text-black tracking-tight flex items-center justify-center md:justify-start gap-2 relative z-10">
-                    <Bot className="w-6 h-6 md:w-8 md:h-8" strokeWidth={2.5} />
-                    Ferramentas & Custos
-                </h2>
-                <p className="text-gray-600 font-medium mt-0.5 text-sm md:text-base relative z-10">Central de assinaturas e plataformas.</p>
-            </div>
-
+        <div className="space-y-6 animate-in fade-in duration-500">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="bg-white rounded-2xl p-5 shadow-apple border border-gray-200 h-fit">
-                    <h3 className="text-[10px] font-black text-gray-400 uppercase mb-4 border-b pb-2">Nova Despesa</h3>
+                    <h3 className="text-[10px] font-black text-gray-400 uppercase mb-4 border-b pb-2 tracking-widest">Nova Despesa</h3>
                     <div className="flex p-1 bg-gray-100 rounded-lg mb-4">
                         <button onClick={() => setItemType('TOOL')} className={`flex-1 py-1.5 text-[10px] font-bold uppercase rounded-md transition-all ${itemType === 'TOOL' ? 'bg-white shadow-sm text-black' : 'text-gray-400'}`}>IA</button>
                         <button onClick={() => setItemType('PLATFORM')} className={`flex-1 py-1.5 text-[10px] font-bold uppercase rounded-md transition-all ${itemType === 'PLATFORM' ? 'bg-white shadow-sm text-black' : 'text-gray-400'}`}>Plataforma</button>
                     </div>
 
                     <div className="space-y-3">
-                        <input type="text" value={newName} onChange={e => setNewName(e.target.value)} placeholder="Nome" className="w-full bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 text-sm" />
-                        <input type="text" value={newDescription} onChange={e => setNewDescription(e.target.value)} placeholder="Descrição" className="w-full bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 text-sm" />
-                        <select value={linkedProjectId} onChange={(e) => setLinkedProjectId(e.target.value)} className="w-full bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 text-sm appearance-none">
+                        <input type="text" value={newName} onChange={e => setNewName(e.target.value)} placeholder="Nome" className="w-full bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-black outline-none" />
+                        <input type="text" value={newDescription} onChange={e => setNewDescription(e.target.value)} placeholder="Descrição" className="w-full bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-black outline-none" />
+                        <select value={linkedProjectId} onChange={(e) => setLinkedProjectId(e.target.value)} className="w-full bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black appearance-none">
                             <option value="">Vincular Projeto</option>
                             {projects.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
                         </select>
                         <div className="grid grid-cols-2 gap-3">
-                            <input type="text" value={newValue} onChange={e => setNewValue(formatCurrencyInput(e.target.value))} placeholder="Valor R$" className="w-full bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 text-sm" />
-                            <input type="text" value={newDate} onChange={e => setNewDate(e.target.value.replace(/\D/g, ''))} placeholder="Vencimento (Dia)" className="w-full bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 text-sm text-center" />
+                            <input type="text" value={newValue} onChange={e => setNewValue(formatCurrencyInput(e.target.value))} placeholder="Valor R$" className="w-full bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-black outline-none" />
+                            <input type="text" value={newDate} onChange={e => setNewDate(e.target.value.replace(/\D/g, ''))} placeholder="Dia Venc." className="w-full bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 text-sm text-center focus:ring-2 focus:ring-black outline-none" />
                         </div>
-                        <select value={newOwner} onChange={(e) => setNewOwner(e.target.value as any)} className="w-full bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 text-sm appearance-none">
+                        <select value={newOwner} onChange={(e) => setNewOwner(e.target.value as any)} className="w-full bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black appearance-none">
                             <option value="CARRYON">CARRYON</option>
                             <option value="SPENCER">SPENCER</option>
                             <option value="JOI.A.">JOI.A.</option>
                         </select>
-                        <button onClick={handleAdd} className="w-full bg-black text-white py-3 rounded-lg font-black uppercase text-xs flex items-center justify-center gap-2">
+                        <button onClick={handleAdd} className="w-full bg-black text-white py-3 rounded-lg font-black uppercase text-[10px] flex items-center justify-center gap-2 shadow-md hover:bg-gray-800 transition-colors">
                             {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />} Adicionar
                         </button>
                     </div>
                 </div>
 
                 <div className="lg:col-span-2 space-y-5">
-                    <div className="bg-black text-white rounded-2xl p-6 shadow-float flex justify-between items-center relative overflow-hidden">
+                    <div className="bg-black text-white rounded-2xl p-5 md:p-6 shadow-float flex justify-between items-center relative overflow-hidden">
                         <div className="z-10">
-                            <p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest">Total Exibido</p>
-                            <p className="text-4xl font-black tracking-tighter">{formatCurrency(totalCost)}</p>
+                            <p className="text-gray-400 text-[9px] font-bold uppercase tracking-widest">Gasto Consolidado Exibido</p>
+                            <p className="text-3xl md:text-4xl font-black tracking-tighter">{formatCurrency(totalCost)}</p>
                         </div>
-                        <div className="z-10 bg-white/10 p-3 rounded-full"><DollarSign size={24} /></div>
+                        <div className="z-10 bg-white/10 p-3 rounded-full hidden sm:block"><DollarSign size={24} /></div>
+                        <div className="absolute right-0 top-1/2 -translate-y-1/2 w-[200px] h-[100px] opacity-10 pointer-events-none">
+                            <CpuArchitecture text="CORE" />
+                        </div>
                     </div>
 
                     <div className="bg-white rounded-2xl shadow-apple border border-gray-200 overflow-hidden">
-                        <div className="p-4 border-b bg-gray-50 flex items-center justify-between gap-4">
-                            <h3 className="font-black text-sm">Lista Unificada</h3>
-                            <div className="relative w-64">
+                        <div className="p-4 border-b bg-gray-50 flex flex-col sm:flex-row items-center justify-between gap-4">
+                            <h3 className="font-black text-xs uppercase tracking-widest text-gray-400">Lista Unificada</h3>
+                            <div className="relative w-full sm:w-64">
                                 <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                                <input type="text" placeholder="Filtrar..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full border rounded-lg pl-9 pr-3 py-2 text-xs" />
+                                <input type="text" placeholder="Filtrar..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full border rounded-lg pl-9 pr-3 py-2 text-xs focus:ring-2 focus:ring-black outline-none" />
                             </div>
                         </div>
                         <div className="divide-y divide-gray-100 min-h-[80px]">
                             {filteredList.map(item => (
                                 <div key={item.id} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between hover:bg-gray-50 transition-colors gap-3">
                                     <div className="flex items-center gap-3 flex-1">
-                                        <div className={`w-9 h-9 rounded-full flex items-center justify-center border shrink-0 ${item.type === 'TOOL' ? 'bg-blue-50 text-blue-600' : 'bg-orange-50 text-orange-600'}`}>
+                                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center border shrink-0 ${item.type === 'TOOL' ? 'bg-blue-50 text-blue-600' : 'bg-orange-50 text-orange-600'}`}>
                                             {item.type === 'TOOL' ? <Bot size={18} /> : <Layers size={18} />}
                                         </div>
-                                        <div className="flex-1">
+                                        <div className="flex-1 min-w-0">
                                             {editingId === item.id ? (
                                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pr-4">
-                                                    <input type="text" value={item.name} onChange={e => {
-                                                        const updated = filteredList.map(i => i.id === item.id ? { ...i, name: e.target.value } : i);
-                                                        // This local state is simplified, typically we use a temporary form state
-                                                    }} className="border rounded px-2 py-1 text-sm font-bold" />
-                                                    <input type="text" value={formatCurrency(item.value)} onChange={e => {}} className="border rounded px-2 py-1 text-sm" />
+                                                    <input type="text" value={item.name} className="border rounded px-2 py-1 text-sm font-bold focus:ring-2 focus:ring-black outline-none" />
+                                                    <input type="text" value={formatCurrency(item.value)} readOnly className="border rounded px-2 py-1 text-sm bg-gray-100" />
                                                 </div>
                                             ) : (
                                                 <>
-                                                    <p className="font-bold text-black text-sm">{item.name}</p>
+                                                    <p className="font-bold text-black text-sm truncate">{item.name}</p>
                                                     <div className="flex items-center gap-2 text-[10px] text-gray-500 font-medium">
                                                         <span>Venc. Dia {item.dueDate}</span>
                                                         <span className="w-0.5 h-0.5 rounded-full bg-gray-300"></span>
@@ -196,14 +183,14 @@ export const AIToolsManager: React.FC = () => {
                                         </div>
                                     </div>
                                     <div className="flex items-center justify-end gap-3 pl-12 sm:pl-0">
-                                        <p className="font-black text-base">{formatCurrency(item.value)}</p>
+                                        <p className="font-black text-sm md:text-base">{formatCurrency(item.value)}</p>
                                         <div className="flex gap-1">
                                             {editingId === item.id ? (
                                                 <button onClick={() => handleInlineUpdate(item)} className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded"><Check size={16} /></button>
                                             ) : (
-                                                <button onClick={() => setEditingId(item.id)} className="p-1.5 text-gray-400 hover:text-black rounded transition-colors"><Edit2 size={16} /></button>
+                                                <button onClick={() => setEditingId(item.id)} className="p-1.5 text-gray-300 hover:text-black rounded transition-colors"><Edit2 size={16} /></button>
                                             )}
-                                            <button onClick={() => handleDelete(item.id, item.type)} className="p-1.5 text-gray-300 hover:text-red-500 transition-colors"><Trash2 size={16} /></button>
+                                            <button onClick={() => handleDelete(item.id, item.type)} className="p-1.5 text-gray-200 hover:text-red-500 transition-colors"><Trash2 size={16} /></button>
                                         </div>
                                     </div>
                                 </div>
