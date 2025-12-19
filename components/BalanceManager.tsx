@@ -120,23 +120,23 @@ export const BalanceManager: React.FC = () => {
     const COLORS = ['#000', '#2563eb', '#f59e0b', '#dc2626', '#10b981', '#7c3aed'];
 
     return (
-        <div className="space-y-4 max-w-5xl mx-auto h-full flex flex-col animate-in fade-in duration-500">
+        <div className="space-y-4 max-w-5xl mx-auto h-full flex flex-col animate-in fade-in duration-300">
             {/* COMPACT 3D Header Card */}
             <div className="bg-gradient-to-br from-black via-zinc-900 to-black text-white p-5 md:p-6 rounded-[2rem] shadow-2xl border border-white/10 relative overflow-hidden shrink-0">
                 <div className="relative z-10 flex justify-between items-center gap-4">
                     <div className="flex-1">
-                        <p className="text-zinc-200 text-[9px] font-black uppercase tracking-[0.2em] mb-1 opacity-80">Net Health Score</p>
+                        <p className="text-white text-[9px] font-black uppercase tracking-[0.2em] mb-1">Net Health Score</p>
                         <h1 className="text-4xl md:text-5xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white to-zinc-300">
                             {formatCurrency(stats.netProfit)}
                         </h1>
                         <div className="flex gap-6 mt-4">
                             <div className="flex flex-col">
-                                <span className="text-[8px] font-bold text-zinc-300 uppercase tracking-wider">Receita Ativa</span>
+                                <span className="text-[8px] font-bold text-white uppercase tracking-wider opacity-90">Receita Ativa</span>
                                 <span className="text-lg font-black text-emerald-400">+{formatCurrency(stats.totalRevenue)}</span>
                             </div>
                             <div className="w-px h-8 bg-zinc-800 self-center" />
                             <div className="flex flex-col">
-                                <span className="text-[8px] font-bold text-zinc-300 uppercase tracking-wider">Custo Operacional</span>
+                                <span className="text-[8px] font-bold text-white uppercase tracking-wider opacity-90">Custo Operacional</span>
                                 <span className="text-lg font-black text-red-400">-{formatCurrency(stats.totalExpenses)}</span>
                             </div>
                         </div>
@@ -170,17 +170,17 @@ export const BalanceManager: React.FC = () => {
                 </button>
             </div>
 
-            <div ref={captureRef} className="flex-1 min-h-0 pb-16 md:pb-0">
+            <div ref={captureRef} className="flex-1 min-h-0 pb-16 md:pb-0 overflow-hidden">
                 <AnimatePresence mode="wait">
                     {activeTab === 'tools' && (
-                        <motion.div key="tools" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.98 }} transition={{ duration: 0.3 }} className="grid grid-cols-1 md:grid-cols-2 gap-4 h-full">
+                        <motion.div key="tools" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.98 }} transition={{ duration: 0.2 }} className="grid grid-cols-1 md:grid-cols-2 gap-4 h-full">
                             <div className="bg-white rounded-[2rem] p-5 md:p-6 shadow-apple border border-gray-100 flex flex-col items-center">
                                 <h4 className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-6">Rateio por Responsável</h4>
-                                <div className="w-44 h-44 relative mb-6">
+                                <div className="w-40 h-40 relative mb-6">
                                     <SimplePieChart data={stats.ownerData} colors={COLORS} />
                                     <div className="absolute inset-0 flex items-center justify-center font-black text-[10px] text-gray-400 opacity-30">NET COST</div>
                                 </div>
-                                <div className="grid grid-cols-2 gap-x-6 gap-y-2 w-full">
+                                <div className="grid grid-cols-2 gap-x-6 gap-y-2 w-full overflow-y-auto max-h-32 custom-scrollbar">
                                     {stats.ownerData.map((d, i) => (
                                         <div key={i} className="flex justify-between items-center text-[11px] font-bold border-b pb-1 border-gray-50">
                                             <span className="flex items-center gap-2 truncate"><div className="w-2 h-2 rounded-full shrink-0 shadow-sm" style={{ background: COLORS[i % COLORS.length] }} /> {d.label}</span>
@@ -191,8 +191,8 @@ export const BalanceManager: React.FC = () => {
                             </div>
                             <div className="bg-white rounded-[2rem] p-5 md:p-6 shadow-apple border border-gray-100 flex flex-col justify-between">
                                 <h4 className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-4">Análise de Intensidade (Custos)</h4>
-                                <SimpleBarChart data={[...tools, ...platforms].sort((a,b)=>b.value-a.value).slice(0, 12).map(i=>({label: i.name, value: i.value}))} color="#000" height="h-32" />
-                                <div className="mt-6 p-4 bg-zinc-50 rounded-2xl border border-zinc-100 flex justify-between items-center">
+                                <SimpleBarChart data={[...tools, ...platforms].sort((a,b)=>b.value-a.value).slice(0, 12).map(i=>({label: i.name, value: i.value}))} color="#000" height="h-24" />
+                                <div className="mt-4 p-4 bg-zinc-50 rounded-2xl border border-zinc-100 flex justify-between items-center">
                                     <div>
                                         <p className="text-[9px] font-black uppercase text-zinc-400 mb-1">Média p/ Ativo</p>
                                         <p className="text-2xl font-black text-black">{formatCurrency(stats.totalExpenses / (tools.length + platforms.length || 1))}</p>
@@ -207,8 +207,8 @@ export const BalanceManager: React.FC = () => {
                     )}
 
                     {activeTab === 'partnerships' && (
-                        <motion.div key="parts" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.98 }} transition={{ duration: 0.3 }} className="h-full">
-                            <div className="bg-white rounded-[2rem] p-5 md:p-6 shadow-apple border border-gray-100 h-full flex flex-col">
+                        <motion.div key="parts" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.98 }} transition={{ duration: 0.2 }} className="h-full">
+                            <div className="bg-white rounded-[2rem] p-5 md:p-6 shadow-apple border border-gray-100 h-full flex flex-col overflow-hidden">
                                 <h4 className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-6">Ranking de Repasse Líquido</h4>
                                 <div className="space-y-3 overflow-y-auto custom-scrollbar flex-1 pr-1">
                                     {stats.partnerData.map((p, i) => (
@@ -232,13 +232,13 @@ export const BalanceManager: React.FC = () => {
                     )}
 
                     {activeTab === 'projects' && (
-                        <motion.div key="projs" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.98 }} transition={{ duration: 0.3 }} className="grid grid-cols-1 md:grid-cols-3 gap-4 h-full">
+                        <motion.div key="projs" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.98 }} transition={{ duration: 0.2 }} className="grid grid-cols-1 md:grid-cols-3 gap-4 h-full">
                             <div className="bg-white rounded-[2rem] p-5 md:p-6 shadow-apple border border-gray-100 flex flex-col items-center col-span-1">
                                 <h4 className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-6">Distribuição de Status</h4>
-                                <div className="w-40 h-40 relative">
+                                <div className="w-36 h-36 relative">
                                     <SimplePieChart data={stats.statusData} colors={['#10b981', '#3b82f6', '#f59e0b', '#dc2626']} />
                                 </div>
-                                <div className="mt-6 space-y-1.5 w-full">
+                                <div className="mt-6 space-y-1.5 w-full overflow-y-auto max-h-32 custom-scrollbar pr-1">
                                     {stats.statusData.map((s, i) => (
                                         <div key={i} className="flex justify-between items-center text-[10px] font-black uppercase tracking-tighter text-gray-600">
                                             <span className="truncate mr-4">{s.label}</span>
@@ -249,15 +249,15 @@ export const BalanceManager: React.FC = () => {
                             </div>
                             <div className="bg-white rounded-[2rem] p-5 md:p-6 shadow-apple border border-gray-100 md:col-span-2 flex flex-col justify-between h-full">
                                 <h4 className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-6">Curva de Receita por Contrato</h4>
-                                <SimpleBarChart data={stats.projectValues.slice(0, 16)} color="#10b981" height="h-36" />
+                                <SimpleBarChart data={stats.projectValues.slice(0, 16)} color="#10b981" height="h-28" />
                                 <div className="grid grid-cols-2 gap-4 mt-6">
                                     <div className="p-4 border rounded-2xl bg-emerald-50 border-emerald-100 shadow-sm">
                                         <p className="text-[9px] font-black uppercase text-emerald-600 mb-1">Ticket Médio HUB</p>
-                                        <p className="text-2xl font-black text-emerald-800">{formatCurrency(stats.totalRevenue / (projects.length || 1))}</p>
+                                        <p className="text-xl font-black text-emerald-800">{formatCurrency(stats.totalRevenue / (projects.length || 1))}</p>
                                     </div>
                                     <div className="p-4 border rounded-2xl bg-blue-50 border-blue-100 shadow-sm">
                                         <p className="text-[9px] font-black uppercase text-blue-600 mb-1">Total de Projetos</p>
-                                        <p className="text-2xl font-black text-blue-800">{projects.length}</p>
+                                        <p className="text-xl font-black text-blue-800">{projects.length}</p>
                                     </div>
                                 </div>
                             </div>

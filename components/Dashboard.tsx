@@ -103,8 +103,15 @@ export const Dashboard: React.FC = () => {
 
   const openGoogleMapsRoute = (address?: string) => {
       if (!address) return;
-      const query = encodeURIComponent(address);
-      window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, '_blank');
+      const cleanAddress = address.trim();
+      // If the address is a direct link, open it. Otherwise search for it.
+      if (cleanAddress.startsWith('http') || cleanAddress.includes('maps.app.goo.gl')) {
+          const url = cleanAddress.startsWith('http') ? cleanAddress : `https://${cleanAddress}`;
+          window.open(url, '_blank');
+      } else {
+          const query = encodeURIComponent(cleanAddress);
+          window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, '_blank');
+      }
   };
 
   const openWhatsApp = (contact?: string) => {
@@ -186,7 +193,7 @@ export const Dashboard: React.FC = () => {
                                     {editingProject.website && <button onClick={() => openWebsite(editingProject.website)} className="bg-blue-50 text-blue-600 p-2 rounded-lg"><ExternalLink size={16} /></button>}
                                 </div>
                                 <div className="flex gap-2">
-                                    <input type="text" value={editingProject.address || ''} onChange={e => setEditingProject({...editingProject, address: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm" placeholder="Endereço" />
+                                    <input type="text" value={editingProject.address || ''} onChange={e => setEditingProject({...editingProject, address: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm" placeholder="Endereço ou Link Maps" />
                                     {editingProject.address && <button onClick={() => openGoogleMapsRoute(editingProject.address)} className="bg-green-50 text-green-600 p-2 rounded-lg"><Navigation size={16} /></button>}
                                 </div>
                           </div>
