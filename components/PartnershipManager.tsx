@@ -58,20 +58,12 @@ export const PartnershipManager: React.FC = () => {
     };
 
     const handleSaveCard = async () => {
-        if (!companyName || numericTotal <= 0 || !dueDay) {
-             addToast('Preencha os campos obrigatórios.', 'warning');
-             return;
-        }
-        if (!isBalanced) {
-             addToast('O valor distribuído não fecha com o total.', 'warning');
-             return;
-        }
         setIsSubmitting(true);
         try {
             await addItem({ 
-                companyName, 
+                companyName: companyName || 'Parceria Sem Nome', 
                 totalValue: numericTotal, 
-                dueDay: parseInt(dueDay), 
+                dueDay: parseInt(dueDay) || 1, 
                 partners: [...partners],
                 createdAt: new Date().toISOString()
             });
@@ -86,12 +78,6 @@ export const PartnershipManager: React.FC = () => {
 
     const handleUpdateCard = async () => {
         if (!editingCard) return;
-        const editTotal = editingCard.totalValue;
-        const editDist = editingCard.partners.reduce((acc, p) => acc + (p.value || 0), 0);
-        if (Math.abs(editTotal - editDist) > 0.05) {
-            addToast('O rateio da edição não está balanceado.', 'warning');
-            return;
-        }
         setIsSaving(true);
         try {
             await updateItem(editingCard.id, editingCard);
@@ -122,12 +108,11 @@ export const PartnershipManager: React.FC = () => {
 
     return (
         <div className="space-y-6 animate-in fade-in duration-500 pb-20 md:pb-0">
-            {/* Modal de Edição */}
             {editingCard && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
                     <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col border border-gray-100 overflow-hidden">
                         <div className="p-6 border-b flex justify-between items-center bg-gray-50">
-                            <h3 className="font-black text-sm uppercase tracking-widest flex items-center gap-2">
+                            <h3 className="font-bold text-sm flex items-center gap-2">
                                 <Edit2 size={16} /> Editar Parceria
                             </h3>
                             <button onClick={() => setEditingCard(null)} className="p-2 hover:bg-gray-200 rounded-full transition-colors"><X size={20} /></button>
@@ -135,28 +120,28 @@ export const PartnershipManager: React.FC = () => {
                         <div className="p-6 space-y-5 overflow-y-auto custom-scrollbar flex-1">
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div className="space-y-1">
-                                    <label className="text-[10px] font-bold text-gray-400 uppercase">Empresa</label>
+                                    <label className="text-[10px] font-bold text-gray-400">Empresa</label>
                                     <input type="text" value={editingCard.companyName} onKeyDown={(e) => handleKeyDown(e, handleUpdateCard)} onChange={e => setEditingCard({...editingCard, companyName: e.target.value})} className="w-full border rounded-xl px-4 py-2.5 font-bold focus:ring-2 focus:ring-black outline-none" />
                                 </div>
                                 <div className="grid grid-cols-2 gap-2">
                                     <div className="space-y-1">
-                                        <label className="text-[10px] font-bold text-gray-400 uppercase">Valor</label>
+                                        <label className="text-[10px] font-bold text-gray-400">Valor</label>
                                         <input type="number" value={editingCard.totalValue} onKeyDown={(e) => handleKeyDown(e, handleUpdateCard)} onChange={e => setEditingCard({...editingCard, totalValue: parseFloat(e.target.value) || 0})} className="w-full border rounded-xl px-4 py-2.5 font-black focus:ring-2 focus:ring-black outline-none" />
                                     </div>
                                     <div className="space-y-1">
-                                        <label className="text-[10px] font-bold text-gray-400 uppercase">Dia Pag.</label>
+                                        <label className="text-[10px] font-bold text-gray-400">Dia Pag.</label>
                                         <input type="number" value={editingCard.dueDay} onKeyDown={(e) => handleKeyDown(e, handleUpdateCard)} onChange={e => setEditingCard({...editingCard, dueDay: parseInt(e.target.value) || 1})} className="w-full border rounded-xl px-4 py-2.5 font-bold focus:ring-2 focus:ring-black outline-none text-center" />
                                     </div>
                                 </div>
                             </div>
                             <div className="bg-gray-50 rounded-2xl p-4 border border-gray-200 space-y-4">
                                 <div className="flex justify-between items-center">
-                                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Rateio dos Beneficiários</label>
+                                    <label className="text-[10px] font-bold text-gray-400 tracking-widest uppercase">Beneficiários</label>
                                     <button 
                                         onClick={() => setEditingCard({...editingCard, partners: autoDistribute(editingCard.totalValue, editingCard.partners)})} 
-                                        className="text-[10px] font-black bg-black text-white px-3 py-1 rounded-lg"
+                                        className="text-[10px] font-bold bg-black text-white px-3 py-1 rounded-lg"
                                     >
-                                        RE-CALCULAR
+                                        AUTO RATEIO
                                     </button>
                                 </div>
                                 <div className="space-y-3">
@@ -179,15 +164,15 @@ export const PartnershipManager: React.FC = () => {
                                         </div>
                                     ))}
                                     <button onClick={() => setEditingCard({...editingCard, partners: [...editingCard.partners, {id: generateId(), name: '', value: 0}]})} className="w-full py-2 border-2 border-dashed border-gray-300 rounded-xl text-gray-400 font-bold text-[10px] uppercase hover:border-black hover:text-black flex items-center justify-center gap-2 transition-all">
-                                        <Plus size={14} /> Adicionar Beneficiário
+                                        <Plus size={14} /> Adicionar
                                     </button>
                                 </div>
                             </div>
                         </div>
                         <div className="p-4 bg-gray-50 flex justify-end gap-2 shrink-0">
                             <button onClick={() => setEditingCard(null)} className="px-5 py-2.5 font-bold text-gray-500 hover:bg-gray-200 rounded-xl">Cancelar</button>
-                            <button onClick={handleUpdateCard} disabled={isSaving} className="bg-black text-white px-6 py-2.5 rounded-xl font-black uppercase text-xs flex items-center gap-2 shadow-lg hover:bg-gray-800 disabled:opacity-50">
-                                {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} Atualizar Parceria
+                            <button onClick={handleUpdateCard} disabled={isSaving} className="bg-black text-white px-6 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 shadow-lg hover:bg-gray-800 disabled:opacity-50">
+                                {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} Atualizar
                             </button>
                         </div>
                     </div>
@@ -214,7 +199,7 @@ export const PartnershipManager: React.FC = () => {
                             </div>
                         </div>
                         <div className="bg-gray-50 rounded-2xl p-4 border border-gray-200 space-y-4">
-                            <div className="flex justify-between items-center"><label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Distribuição</label><button onClick={() => setPartners(autoDistribute(numericTotal, partners))} className="text-[10px] font-black bg-black text-white px-3 py-1 rounded-lg shadow-sm">AUTO RATEIO</button></div>
+                            <div className="flex justify-between items-center"><label className="text-[10px] font-bold text-gray-400 tracking-widest uppercase">Distribuição</label><button onClick={() => setPartners(autoDistribute(numericTotal, partners))} className="text-[10px] font-bold bg-black text-white px-3 py-1 rounded-lg shadow-sm">AUTO RATEIO</button></div>
                             <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1 custom-scrollbar">
                                 {partners.map((partner) => (
                                     <div key={partner.id} className="flex gap-2 items-center animate-in slide-in-from-left-2">
@@ -224,13 +209,13 @@ export const PartnershipManager: React.FC = () => {
                                     </div>
                                 ))}
                             </div>
-                            <button onClick={handleAddPartnerInput} className="w-full py-3 border-2 border-dashed border-gray-300 rounded-2xl text-gray-400 font-bold text-[10px] uppercase hover:border-black hover:text-black flex items-center justify-center gap-2 transition-all"><Plus size={14} /> Novo Beneficiário</button>
+                            <button onClick={handleAddPartnerInput} className="w-full py-3 border-2 border-dashed border-gray-300 rounded-2xl text-gray-400 font-bold text-[10px] uppercase hover:border-black hover:text-black flex items-center justify-center gap-2 transition-all"><Plus size={14} /> Novo</button>
                         </div>
                         <div className={`rounded-2xl p-4 flex items-center justify-between border transition-all shadow-sm ${isBalanced ? 'bg-emerald-50 border-emerald-100' : 'bg-red-50 border-red-100'}`}>
-                            <div><p className={`text-[9px] font-black uppercase tracking-widest ${isBalanced ? 'text-emerald-700' : 'text-red-700'}`}>{isBalanced ? 'Saldo Verificado' : 'Rateio Pendente'}</p><p className="text-[10px] text-gray-500 font-bold mt-1">Total: {formatCurrency(distributedTotal)}</p></div>
+                            <div><p className={`text-[9px] font-black uppercase tracking-widest ${isBalanced ? 'text-emerald-700' : 'text-red-700'}`}>{isBalanced ? 'Saldo Verificado' : 'Diferença Pendente'}</p><p className="text-[10px] text-gray-500 font-bold mt-1">Total: {formatCurrency(distributedTotal)}</p></div>
                             <p className={`text-xl font-black ${isBalanced ? 'text-emerald-600' : 'text-red-600'}`}>{formatCurrency(difference)}</p>
                         </div>
-                        <button onClick={handleSaveCard} className="w-full bg-black text-white py-4 rounded-2xl font-black uppercase text-xs tracking-widest flex items-center justify-center gap-2 shadow-xl hover:bg-gray-800 disabled:opacity-50 transition-all">{isSubmitting ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />} Salvar Parceria</button>
+                        <button onClick={handleSaveCard} className="w-full bg-black text-white py-4 rounded-2xl font-bold uppercase text-xs tracking-widest flex items-center justify-center gap-2 shadow-xl hover:bg-gray-800 disabled:opacity-50 transition-all">{isSubmitting ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />} Salvar Parceria</button>
                     </div>
                 </div>
                 <div className="space-y-4">
@@ -248,9 +233,9 @@ export const PartnershipManager: React.FC = () => {
                                 <div className="flex items-center gap-4">
                                     <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center border border-gray-100 shrink-0"><Building2 size={24} className="text-gray-400" /></div>
                                     <div className="flex-1 truncate">
-                                        <h4 className="font-black text-base truncate text-gray-900">{card.companyName}</h4>
+                                        <h4 className="font-bold text-base truncate text-gray-900">{card.companyName}</h4>
                                         <div className="flex items-center gap-2 mt-1">
-                                            <span className="text-[11px] font-black text-black">{formatCurrency(card.totalValue)}</span>
+                                            <span className="text-[11px] font-bold text-black">{formatCurrency(card.totalValue)}</span>
                                             <span className="w-1 h-1 rounded-full bg-gray-300"></span>
                                             <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">Dia {card.dueDay}</span>
                                         </div>

@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Project } from '../types';
 import { formatCurrency, extractDominantColor, compressImage, formatCurrencyInput, parseCurrencyInput } from '../services/utils';
@@ -26,21 +27,17 @@ export const Dashboard: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleAddProject = async () => {
-    if (!newName) {
-        addToast('Preencha o nome do projeto.', 'warning');
-        return;
-    }
     setIsSubmitting(true);
 
     try {
         const newProject: any = {
-            nome: newName,
+            nome: newName || 'Empresa Sem Nome',
             cnpj: newCNPJ || 'Não informado',
             status: 'EM TREINAMENTO',
             dataStart: newStartDate || new Date().toISOString(),
             diaMensalidade: 5,
-            supervisorName: newSupervisor,
-            supervisorContact: newContact,
+            supervisorName: newSupervisor || '',
+            supervisorContact: newContact || '',
             valorContrato: parseCurrencyInput(newVal),
             brandColor: '#000000',
             address: '',
@@ -48,7 +45,7 @@ export const Dashboard: React.FC = () => {
         };
 
         await addItem(newProject);
-        addToast('Projeto criado com sucesso!', 'success');
+        addToast('Projeto registrado.', 'success');
         setIsAdding(false);
         resetForm();
     } catch (error) {
@@ -104,7 +101,6 @@ export const Dashboard: React.FC = () => {
   const openGoogleMapsRoute = (address?: string) => {
       if (!address) return;
       const cleanAddress = address.trim();
-      // If the address is a direct link, open it. Otherwise search for it.
       if (cleanAddress.startsWith('http') || cleanAddress.includes('maps.app.goo.gl')) {
           const url = cleanAddress.startsWith('http') ? cleanAddress : `https://${cleanAddress}`;
           window.open(url, '_blank');
@@ -172,7 +168,7 @@ export const Dashboard: React.FC = () => {
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
               <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto border-l-4" style={{ borderColor: editingProject.brandColor || '#000' }}>
                   <div className="p-5 border-b border-gray-100 flex justify-between items-center sticky top-0 bg-white/95 backdrop-blur z-20">
-                      <h3 className="font-black text-lg flex items-center gap-2 uppercase tracking-wide">
+                      <h3 className="font-bold text-lg flex items-center gap-2">
                           <Building2 size={20} style={{ color: editingProject.brandColor }} /> Detalhes
                       </h3>
                       <button onClick={() => setEditingProject(null)} className="p-1.5 hover:bg-gray-100 rounded-full"><X size={20} /></button>
@@ -185,7 +181,7 @@ export const Dashboard: React.FC = () => {
                           </div>
                           <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleLogoUpload} />
                           <div className="flex-1 w-full">
-                              <label className="text-[10px] font-bold text-gray-400 uppercase">Nome da Empresa</label>
+                              <label className="text-[10px] font-bold text-gray-400">Nome da Empresa</label>
                               <input 
                                 type="text" 
                                 value={editingProject.nome} 
@@ -198,7 +194,7 @@ export const Dashboard: React.FC = () => {
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                           <div className="space-y-4">
-                                <h4 className="text-xs font-black text-black uppercase border-b border-gray-200 pb-1.5">Dados Cadastrais</h4>
+                                <h4 className="text-xs font-bold text-black border-b border-gray-200 pb-1.5">Dados Cadastrais</h4>
                                 <input 
                                     type="text" 
                                     value={editingProject.cnpj} 
@@ -231,7 +227,7 @@ export const Dashboard: React.FC = () => {
                                 </div>
                           </div>
                           <div className="space-y-4">
-                                <h4 className="text-xs font-black text-black uppercase border-b border-gray-200 pb-1.5">Contato & Financeiro</h4>
+                                <h4 className="text-xs font-bold text-black border-b border-gray-200 pb-1.5">Contato & Financeiro</h4>
                                 <input 
                                     type="text" 
                                     value={editingProject.supervisorName} 
@@ -281,18 +277,18 @@ export const Dashboard: React.FC = () => {
 
       {isAdding && (
          <div className="bg-white rounded-2xl p-5 shadow-float border border-gray-200 animate-in slide-in-from-top-10 mb-6">
-            <h3 className="text-xs font-black text-gray-400 uppercase tracking-wider mb-4 border-b border-gray-100 pb-2">Novo Contrato</h3>
+            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 border-b border-gray-100 pb-2">Novo Contrato</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <input 
                     type="text" 
                     value={newName} 
                     onKeyDown={(e) => handleKeyDown(e, handleAddProject)}
                     onChange={e => setNewName(e.target.value)} 
-                    placeholder="NOME DA EMPRESA" 
+                    placeholder="Nome da Empresa" 
                     className="w-full bg-gray-50 border border-gray-300 rounded-lg px-3 py-2.5 text-black font-bold focus:ring-2 focus:ring-black outline-none transition-all text-sm" 
                 />
                 <div className="md:col-span-2 lg:col-span-3 pt-2">
-                    <button onClick={handleAddProject} disabled={isSubmitting} className="w-full bg-black text-white py-3 rounded-lg font-black uppercase tracking-widest text-xs disabled:opacity-50 flex items-center justify-center gap-2">
+                    <button onClick={handleAddProject} disabled={isSubmitting} className="w-full bg-black text-white py-3 rounded-lg font-bold uppercase tracking-widest text-xs disabled:opacity-50 flex items-center justify-center gap-2">
                         {isSubmitting ? 'Registrando...' : 'Confirmar Cadastro'}
                     </button>
                 </div>
@@ -309,7 +305,7 @@ export const Dashboard: React.FC = () => {
                         {project.logo ? <img src={project.logo} className="w-full h-full object-contain" /> : <Building2 size={18} style={{ color: project.brandColor || '#000' }} />}
                     </div>
                 </div>
-                <h3 className="text-sm font-black text-black leading-tight line-clamp-1">{project.nome}</h3>
+                <h3 className="text-sm font-bold text-black leading-tight line-clamp-1">{project.nome}</h3>
                 <div className="mt-auto pt-2 border-t border-gray-100 flex justify-between items-center">
                     <div>
                         <p className="text-[8px] font-bold text-gray-400 uppercase">Mensal</p>
