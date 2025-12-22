@@ -8,8 +8,7 @@ import { Project, AITool, Platform, PartnershipCard } from '../types';
 import { useToast } from '../context/ToastContext';
 
 export const AIToolsManager: React.FC = () => {
-    // Mantemos o carregamento de ambas as coleções para não perder dados legados, 
-    // mas o registro novo será concentrado.
+    // Mantemos o carregamento de ambas as coleções para não perder dados legados
     const { data: tools, loading: loadingTools, addItem: addTool, updateItem: updateTool, deleteItem: deleteTool } = useFirestoreCollection<AITool>('ai_tools');
     const { data: platforms, loading: loadingPlatforms, updateItem: updatePlatform, deleteItem: deletePlatform } = useFirestoreCollection<Platform>('platforms');
     const { data: projects } = useFirestoreCollection<Project>('projects');
@@ -32,8 +31,9 @@ export const AIToolsManager: React.FC = () => {
     const [isSaving, setIsSaving] = useState(false);
 
     const linkingOptions = useMemo(() => {
-        const projOptions = projects.map(p => ({ id: p.id, name: p.nome, type: 'PROJETO' }));
-        const partOptions = partnerships.map(p => ({ id: p.id, name: p.companyName, type: 'PARCERIA' }));
+        // Unifica projetos e parcerias em uma única lista sem prefixos
+        const projOptions = projects.map(p => ({ id: p.id, name: p.nome }));
+        const partOptions = partnerships.map(p => ({ id: p.id, name: p.companyName }));
         return [...projOptions, ...partOptions].sort((a, b) => a.name.localeCompare(b.name));
     }, [projects, partnerships]);
 
@@ -60,7 +60,6 @@ export const AIToolsManager: React.FC = () => {
     const handleAdd = async () => {
         setIsSubmitting(true);
         try {
-            // Agora tudo é registrado na coleção 'ai_tools' (Ferramentas)
             const newTool: Omit<AITool, 'id'> = {
                 name: newName || 'Ferramenta Sem Nome',
                 description: newDescription,
@@ -90,7 +89,6 @@ export const AIToolsManager: React.FC = () => {
             if (type === 'TOOL') {
                 await updateTool(editingItem.id, rest);
             } else {
-                // Suporte para edição de dados legados de plataformas
                 const updatedItem = {
                     ...rest,
                     client: findLinkedName(rest.linkedProjectId)
@@ -170,10 +168,10 @@ export const AIToolsManager: React.FC = () => {
                                     </select>
                                 </div>
                                 <div className="space-y-1">
-                                    <label className="text-[10px] font-bold text-gray-400">Vincular Ativo</label>
+                                    <label className="text-[10px] font-bold text-gray-400">Vincular Projeto</label>
                                     <select value={editingItem.linkedProjectId || ''} onChange={e => setEditingItem({...editingItem, linkedProjectId: e.target.value})} className="w-full border rounded-xl px-4 py-2.5 font-bold focus:ring-2 focus:ring-black outline-none appearance-none bg-white">
                                         <option value="">Nenhum (Avulso)</option>
-                                        {linkingOptions.map(opt => <option key={opt.id} value={opt.id}>[{opt.type}] {opt.name}</option>)}
+                                        {linkingOptions.map(opt => <option key={opt.id} value={opt.id}>{opt.name}</option>)}
                                     </select>
                                 </div>
                             </div>
@@ -197,10 +195,10 @@ export const AIToolsManager: React.FC = () => {
                         <input type="text" value={newDescription} onKeyDown={(e) => handleKeyDown(e, handleAdd)} onChange={e => setNewDescription(e.target.value)} placeholder="Breve Descrição" className="w-full bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-black outline-none" />
                         
                         <div className="space-y-1">
-                            <label className="text-[8px] font-black text-gray-400 tracking-tighter uppercase">Vincular Ativo</label>
+                            <label className="text-[8px] font-black text-gray-400 tracking-tighter uppercase">Vincular Projeto</label>
                             <select value={linkedProjectId} onKeyDown={(e) => handleKeyDown(e, handleAdd)} onChange={(e) => setLinkedProjectId(e.target.value)} className="w-full bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black appearance-none">
                                 <option value="">Nenhum (Avulso)</option>
-                                {linkingOptions.map(opt => <option key={opt.id} value={opt.id}>[{opt.type}] {opt.name}</option>)}
+                                {linkingOptions.map(opt => <option key={opt.id} value={opt.id}>{opt.name}</option>)}
                             </select>
                         </div>
 
@@ -236,7 +234,7 @@ export const AIToolsManager: React.FC = () => {
 
                     <div className="bg-white rounded-2xl shadow-apple border border-gray-200 overflow-hidden">
                         <div className="p-4 border-b bg-gray-50 flex flex-col sm:flex-row items-center justify-between gap-4">
-                            <h3 className="font-bold text-xs text-gray-400">Ferramentas Registradas</h3>
+                            <h3 className="font-bold text-xs text-gray-400 uppercase tracking-widest">Lista Unificada</h3>
                             <div className="relative w-full sm:w-64">
                                 <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                                 <input type="text" placeholder="Filtrar por nome ou descrição..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full border rounded-lg pl-9 pr-3 py-2 text-xs focus:ring-2 focus:ring-black outline-none" />
@@ -248,26 +246,21 @@ export const AIToolsManager: React.FC = () => {
                             )}
                             {filteredList.map(item => (
                                 <div key={item.id} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between hover:bg-gray-50 transition-colors gap-3 group">
-                                    <div className="flex items-center gap-3 flex-1">
-                                        <div className="w-9 h-9 rounded-xl flex items-center justify-center border shrink-0 bg-blue-50 text-blue-600">
-                                            <Bot size={18} />
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <p className="font-bold text-black text-sm truncate">{item.name}</p>
-                                            <div className="flex items-center gap-2 text-[10px] text-gray-500 font-medium">
-                                                <span>Venc. Dia {item.dueDate}</span>
-                                                <span className="w-0.5 h-0.5 rounded-full bg-gray-300"></span>
-                                                <span className="font-bold text-black/70">{item.owner}</span>
-                                                {item.linkedProjectId && (
-                                                    <>
-                                                        <span className="w-0.5 h-0.5 rounded-full bg-gray-300"></span>
-                                                        <span className="truncate italic">{findLinkedName(item.linkedProjectId)}</span>
-                                                    </>
-                                                )}
-                                            </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="font-bold text-black text-sm truncate">{item.name}</p>
+                                        <div className="flex items-center gap-2 text-[10px] text-gray-500 font-medium">
+                                            <span>Venc. Dia {item.dueDate}</span>
+                                            <span className="w-0.5 h-0.5 rounded-full bg-gray-300"></span>
+                                            <span className="font-black text-black/70 uppercase">{item.owner}</span>
+                                            {item.linkedProjectId && (
+                                                <>
+                                                    <span className="w-0.5 h-0.5 rounded-full bg-gray-300"></span>
+                                                    <span className="truncate italic uppercase text-[9px]">{findLinkedName(item.linkedProjectId)}</span>
+                                                </>
+                                            )}
                                         </div>
                                     </div>
-                                    <div className="flex items-center justify-end gap-3 pl-12 sm:pl-0">
+                                    <div className="flex items-center justify-end gap-4 shrink-0">
                                         <p className="font-black text-sm md:text-base">{formatCurrency(item.value)}</p>
                                         <div className="flex gap-1">
                                             <button onClick={() => setEditingItem(item)} className="p-1.5 text-gray-300 hover:text-black hover:bg-gray-100 rounded-lg transition-all"><Edit2 size={16} /></button>
