@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo } from 'react';
-import { Cpu, Plus, Trash2, TrendingUp, Loader2, Search, Edit2, X, Save } from 'lucide-react';
+import { Zap, Plus, Trash2, TrendingUp, Loader2, Search, Edit2, X, Save, ShieldCheck, Layers } from 'lucide-react';
 import { formatCurrency, formatCurrencyInput, parseCurrencyInput } from '../services/utils';
 import { useFirestoreCollection } from '../hooks/useFirestore';
 import { CpuArchitecture } from './ui/cpu-architecture';
@@ -8,11 +8,9 @@ import { Project, AITool, Platform, PartnershipCard } from '../types';
 import { useToast } from '../context/ToastContext';
 
 export const AIToolsManager: React.FC = () => {
-    // Mantemos o carregamento de ambas as coleções para não perder dados legados
     const { data: tools, loading: loadingTools, addItem: addTool, updateItem: updateTool, deleteItem: deleteTool } = useFirestoreCollection<AITool>('ai_tools');
     const { data: platforms, loading: loadingPlatforms, updateItem: updatePlatform, deleteItem: deletePlatform } = useFirestoreCollection<Platform>('platforms');
     const { data: projects } = useFirestoreCollection<Project>('projects');
-    const { data: partnerships } = useFirestoreCollection<PartnershipCard>('partnerships');
     const { addToast } = useToast();
     
     const loading = loadingTools || loadingPlatforms;
@@ -30,33 +28,24 @@ export const AIToolsManager: React.FC = () => {
     const [editingItem, setEditingItem] = useState<any | null>(null);
     const [isSaving, setIsSaving] = useState(false);
 
+    // FILTRO DE PROJETOS: Apenas projetos registrados, sem duplicatas por nome
     const linkingOptions = useMemo(() => {
-        // Unifica projetos e parcerias em uma única lista
-        const allOptions = [
-            ...projects.map(p => ({ id: p.id, name: p.nome })),
-            ...partnerships.map(p => ({ id: p.id, name: p.companyName }))
-        ];
-
-        // Remove duplicidades por nome (ignora case e espaços extras)
         const seenNames = new Set();
-        const uniqueOptions = allOptions.filter(opt => {
-            const normalizedName = opt.name.trim().toUpperCase();
-            if (seenNames.has(normalizedName)) {
-                return false;
-            }
-            seenNames.add(normalizedName);
-            return true;
-        });
+        return projects
+            .map(p => ({ id: p.id, name: p.nome }))
+            .filter(opt => {
+                const normalized = opt.name.trim().toUpperCase();
+                if (seenNames.has(normalized)) return false;
+                seenNames.add(normalized);
+                return true;
+            })
+            .sort((a, b) => a.name.localeCompare(b.name));
+    }, [projects]);
 
-        return uniqueOptions.sort((a, b) => a.name.localeCompare(b.name));
-    }, [projects, partnerships]);
-
-    const responsibleOptions = useMemo(() => {
-        return ['CARRYON', 'SPENCER', 'JOI.A.'];
-    }, []);
+    const responsibleOptions = ['CARRYON', 'SPENCER', 'JOI.A.'];
 
     const findLinkedName = (id: string) => {
-        return linkingOptions.find(opt => opt.id === id)?.name || 'Avulso';
+        return projects.find(p => p.id === id)?.nome || 'Avulso';
     };
 
     const handleAdd = async () => {
@@ -190,7 +179,7 @@ export const AIToolsManager: React.FC = () => {
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="bg-white rounded-2xl p-5 shadow-apple border border-gray-200 h-fit">
-                    <h3 className="text-[10px] font-black text-gray-400 uppercase mb-4 border-b pb-2 tracking-widest flex items-center gap-2">Nova Ferramenta <Cpu size={12}/></h3>
+                    <h3 className="text-[10px] font-black text-gray-400 uppercase mb-4 border-b pb-2 tracking-widest flex items-center gap-2">Nova Ferramenta <Zap size={12} className="fill-black" /></h3>
                     
                     <div className="space-y-3">
                         <input type="text" value={newName} onKeyDown={(e) => handleKeyDown(e, handleAdd)} onChange={e => setNewName(e.target.value)} placeholder="Nome da Ferramenta" className="w-full bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-black outline-none" />
@@ -236,7 +225,7 @@ export const AIToolsManager: React.FC = () => {
 
                     <div className="bg-white rounded-2xl shadow-apple border border-gray-200 overflow-hidden">
                         <div className="p-4 border-b bg-gray-50 flex flex-col sm:flex-row items-center justify-between gap-4">
-                            <h3 className="font-bold text-xs text-gray-400 uppercase tracking-widest">Lista Unificada</h3>
+                            <h3 className="font-bold text-xs text-gray-400 uppercase tracking-widest flex items-center gap-2"><Layers size={14}/> Lista Unificada</h3>
                             <div className="relative w-full sm:w-64">
                                 <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                                 <input type="text" placeholder="Filtrar por nome ou descrição..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full border rounded-lg pl-9 pr-3 py-2 text-xs focus:ring-2 focus:ring-black outline-none" />
@@ -251,13 +240,13 @@ export const AIToolsManager: React.FC = () => {
                                     <div className="flex-1 min-w-0">
                                         <p className="font-bold text-black text-sm truncate">{item.name}</p>
                                         <div className="flex items-center gap-2 text-[10px] text-gray-500 font-medium">
-                                            <span>Venc. Dia {item.dueDate}</span>
+                                            <span className="flex items-center gap-1 font-black text-black/70 uppercase tracking-tighter"><ShieldCheck size={10}/> {item.owner}</span>
                                             <span className="w-0.5 h-0.5 rounded-full bg-gray-300"></span>
-                                            <span className="font-black text-black/70 uppercase">{item.owner}</span>
+                                            <span>Venc. Dia {item.dueDate}</span>
                                             {item.linkedProjectId && (
                                                 <>
                                                     <span className="w-0.5 h-0.5 rounded-full bg-gray-300"></span>
-                                                    <span className="truncate italic uppercase text-[9px]">{findLinkedName(item.linkedProjectId)}</span>
+                                                    <span className="truncate italic uppercase text-[9px] text-zinc-400">{findLinkedName(item.linkedProjectId)}</span>
                                                 </>
                                             )}
                                         </div>
