@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Plus, Trash2, Calculator, Save, Building2, Loader2, ChevronDown, ChevronUp, Search, Edit2, X, Check } from 'lucide-react';
+import { Plus, Trash2, Calculator, Save, Handshake, Loader2, ChevronDown, ChevronUp, Search, Edit2, X, Check } from 'lucide-react';
 import { formatCurrency } from '../services/utils';
 import { Partner, PartnershipCard } from '../types';
 import { useFirestoreCollection } from '../hooks/useFirestore';
@@ -172,7 +172,7 @@ export const PartnershipManager: React.FC = () => {
                         <div className="p-4 bg-gray-50 flex justify-end gap-2 shrink-0">
                             <button onClick={() => setEditingCard(null)} className="px-5 py-2.5 font-bold text-gray-500 hover:bg-gray-200 rounded-xl">Cancelar</button>
                             <button onClick={handleUpdateCard} disabled={isSaving} className="bg-black text-white px-6 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 shadow-lg hover:bg-gray-800 disabled:opacity-50">
-                                {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} Atualizar
+                                {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />} Atualizar
                             </button>
                         </div>
                     </div>
@@ -231,7 +231,6 @@ export const PartnershipManager: React.FC = () => {
                                     <button onClick={(e) => handleConfirmDelete(card.id, e)} className="text-gray-200 hover:text-red-500 p-1.5 transition-colors"><Trash2 size={18} /></button>
                                 </div>
                                 <div className="flex items-center gap-4">
-                                    <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center border border-gray-100 shrink-0"><Building2 size={24} className="text-gray-400" /></div>
                                     <div className="flex-1 truncate">
                                         <h4 className="font-bold text-base truncate text-gray-900">{card.companyName}</h4>
                                         <div className="flex items-center gap-2 mt-1">

@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo } from 'react';
-import { Bot, Plus, Trash2, DollarSign, Loader2, Search, Edit2, X, Save } from 'lucide-react';
+import { Cpu, Plus, Trash2, TrendingUp, Loader2, Search, Edit2, X, Save } from 'lucide-react';
 import { formatCurrency, formatCurrencyInput, parseCurrencyInput } from '../services/utils';
 import { useFirestoreCollection } from '../hooks/useFirestore';
 import { CpuArchitecture } from './ui/cpu-architecture';
@@ -23,7 +23,7 @@ export const AIToolsManager: React.FC = () => {
     const [newDescription, setNewDescription] = useState('');
     const [newValue, setNewValue] = useState('');
     const [newDate, setNewDate] = useState('');
-    const [newOwner, setNewOwner] = useState('CarryOn');
+    const [newOwner, setNewOwner] = useState('CARRYON');
     const [linkedProjectId, setLinkedProjectId] = useState('');
     
     const [searchTerm, setSearchTerm] = useState('');
@@ -31,27 +31,29 @@ export const AIToolsManager: React.FC = () => {
     const [isSaving, setIsSaving] = useState(false);
 
     const linkingOptions = useMemo(() => {
-        // Unifica projetos e parcerias em uma única lista sem prefixos
-        const projOptions = projects.map(p => ({ id: p.id, name: p.nome }));
-        const partOptions = partnerships.map(p => ({ id: p.id, name: p.companyName }));
-        return [...projOptions, ...partOptions].sort((a, b) => a.name.localeCompare(b.name));
+        // Unifica projetos e parcerias em uma única lista
+        const allOptions = [
+            ...projects.map(p => ({ id: p.id, name: p.nome })),
+            ...partnerships.map(p => ({ id: p.id, name: p.companyName }))
+        ];
+
+        // Remove duplicidades por nome (ignora case e espaços extras)
+        const seenNames = new Set();
+        const uniqueOptions = allOptions.filter(opt => {
+            const normalizedName = opt.name.trim().toUpperCase();
+            if (seenNames.has(normalizedName)) {
+                return false;
+            }
+            seenNames.add(normalizedName);
+            return true;
+        });
+
+        return uniqueOptions.sort((a, b) => a.name.localeCompare(b.name));
     }, [projects, partnerships]);
 
     const responsibleOptions = useMemo(() => {
-        const names = new Set<string>();
-        names.add('CarryOn');
-        names.add('Spencer');
-        names.add('Joi.a.');
-        
-        partnerships.forEach(p => {
-            p.partners.forEach(partner => {
-                if (partner.name.trim()) {
-                    names.add(partner.name.trim());
-                }
-            });
-        });
-        return Array.from(names).sort();
-    }, [partnerships]);
+        return ['CARRYON', 'SPENCER', 'JOI.A.'];
+    }, []);
 
     const findLinkedName = (id: string) => {
         return linkingOptions.find(opt => opt.id === id)?.name || 'Avulso';
@@ -188,7 +190,7 @@ export const AIToolsManager: React.FC = () => {
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="bg-white rounded-2xl p-5 shadow-apple border border-gray-200 h-fit">
-                    <h3 className="text-[10px] font-black text-gray-400 uppercase mb-4 border-b pb-2 tracking-widest">Nova Ferramenta</h3>
+                    <h3 className="text-[10px] font-black text-gray-400 uppercase mb-4 border-b pb-2 tracking-widest flex items-center gap-2">Nova Ferramenta <Cpu size={12}/></h3>
                     
                     <div className="space-y-3">
                         <input type="text" value={newName} onKeyDown={(e) => handleKeyDown(e, handleAdd)} onChange={e => setNewName(e.target.value)} placeholder="Nome da Ferramenta" className="w-full bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-black outline-none" />
@@ -226,7 +228,7 @@ export const AIToolsManager: React.FC = () => {
                             <p className="text-gray-400 text-[9px] font-bold uppercase tracking-widest">Custo Operacional Mensal</p>
                             <p className="text-3xl md:text-4xl font-black tracking-tighter">{formatCurrency(totalGlobalCost)}</p>
                         </div>
-                        <div className="z-10 bg-white/10 p-3 rounded-full hidden sm:block"><DollarSign size={24} /></div>
+                        <div className="z-10 bg-white/10 p-3 rounded-full hidden sm:block"><TrendingUp size={24} /></div>
                         <div className="absolute right-0 top-1/2 -translate-y-1/2 w-[200px] h-[100px] opacity-10 pointer-events-none">
                             <CpuArchitecture text="CORE" />
                         </div>

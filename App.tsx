@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Dashboard } from './components/Dashboard';
 import { MeetingCreator } from './components/MeetingCreator';
@@ -5,7 +6,7 @@ import { AIToolsManager } from './components/AIToolsManager';
 import { PartnershipManager } from './components/PartnershipManager';
 import { BalanceManager } from './components/BalanceManager';
 import { NotificationCenter } from './components/NotificationCenter';
-import { CalendarPlus, Bot, CreditCard, Bell, PieChart, Briefcase } from 'lucide-react';
+import { Target, Cpu, Handshake, Bell, Activity, Video } from 'lucide-react';
 import { useNotifications } from './hooks/useNotifications';
 import { useFirestoreDocument } from './hooks/useFirestore';
 import { GLOBAL_SETTINGS_ID } from './constants';
@@ -31,14 +32,14 @@ function App() {
   };
 
   const mainNavItems = [
-    { id: 'dashboard', label: 'Projetos', icon: Briefcase },
-    { id: 'ai-tools', label: 'Ferramentas & Custos', icon: Bot },
-    { id: 'partnership', label: 'Parcerias', icon: CreditCard },
+    { id: 'dashboard', label: 'Projetos', icon: Target },
+    { id: 'ai-tools', label: 'Ferramentas', icon: Cpu },
+    { id: 'partnership', label: 'Parcerias', icon: Handshake },
   ];
 
   const systemNavItems = [
-    { id: 'balance', label: 'Balance', icon: PieChart },
-    { id: 'meetings', label: 'Reuniões', icon: CalendarPlus },
+    { id: 'balance', label: 'Balance', icon: Activity },
+    { id: 'meetings', label: 'Reuniões', icon: Video },
   ];
 
   const renderContent = () => {
@@ -54,7 +55,7 @@ function App() {
 
   const getPageInfo = () => {
       const allItems = [...mainNavItems, ...systemNavItems];
-      return allItems.find(i => i.id === currentView) || { label: 'Dashboard', icon: Briefcase };
+      return allItems.find(i => i.id === currentView) || { label: 'Dashboard', icon: Target };
   }
 
   const { label: pageTitle, icon: PageIcon } = getPageInfo();

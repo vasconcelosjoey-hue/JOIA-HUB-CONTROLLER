@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Project } from '../types';
 import { formatCurrency, extractDominantColor, compressImage, formatCurrencyInput, parseCurrencyInput } from '../services/utils';
-import { Building2, Plus, X, Upload, Trash2, MessageCircle, ExternalLink, Check, Navigation, Loader2, Search } from 'lucide-react';
+import { Target, Plus, X, Upload, Trash2, MessageCircle, ExternalLink, Check, Navigation, Loader2, Search } from 'lucide-react';
 import { useFirestoreCollection } from '../hooks/useFirestore';
 import { useToast } from '../context/ToastContext';
 
@@ -168,8 +168,8 @@ export const Dashboard: React.FC = () => {
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
               <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto border-l-4" style={{ borderColor: editingProject.brandColor || '#000' }}>
                   <div className="p-5 border-b border-gray-100 flex justify-between items-center sticky top-0 bg-white/95 backdrop-blur z-20">
-                      <h3 className="font-bold text-lg flex items-center gap-2">
-                          <Building2 size={20} style={{ color: editingProject.brandColor }} /> Detalhes
+                      <h3 className="font-bold text-lg flex items-center gap-2 uppercase tracking-tighter">
+                          Detalhes
                       </h3>
                       <button onClick={() => setEditingProject(null)} className="p-1.5 hover:bg-gray-100 rounded-full"><X size={20} /></button>
                   </div>
@@ -301,9 +301,11 @@ export const Dashboard: React.FC = () => {
             <div key={project.id} onClick={() => setEditingProject(project)} className="group bg-white rounded-xl p-3 shadow-apple hover:shadow-float transition-all border cursor-pointer relative overflow-hidden flex flex-col gap-2.5" style={{ borderColor: project.brandColor ? `${project.brandColor}30` : '#e5e7eb' }}>
                 <div className="absolute top-0 left-0 w-full h-1" style={{ backgroundColor: project.brandColor || '#000' }}></div>
                 <div className="flex justify-between items-start mt-1">
-                    <div className="w-10 h-10 rounded-lg bg-gray-50 border border-gray-100 flex items-center justify-center p-1 overflow-hidden shadow-sm">
-                        {project.logo ? <img src={project.logo} className="w-full h-full object-contain" /> : <Building2 size={18} style={{ color: project.brandColor || '#000' }} />}
-                    </div>
+                    {project.logo && (
+                        <div className="w-10 h-10 rounded-lg bg-gray-50 border border-gray-100 flex items-center justify-center p-1 overflow-hidden shadow-sm">
+                             <img src={project.logo} className="w-full h-full object-contain" />
+                        </div>
+                    )}
                 </div>
                 <h3 className="text-sm font-bold text-black leading-tight line-clamp-1">{project.nome}</h3>
                 <div className="mt-auto pt-2 border-t border-gray-100 flex justify-between items-center">
