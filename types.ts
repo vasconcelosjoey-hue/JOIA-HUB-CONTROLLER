@@ -67,7 +67,15 @@ export interface Platform extends BaseEntity {
     linkedProjectId?: string; // Optional link to a project or partnership
 }
 
-// --- 5. NOTIFICATIONS & ALERTS ---
+// --- 5. EXPENSES DOMAIN ---
+export interface Expense extends BaseEntity {
+    category: string;
+    description: string;
+    value: number;
+    timestamp: string; // ISO Full date and time
+}
+
+// --- 6. NOTIFICATIONS & ALERTS ---
 export interface Notification extends BaseEntity {
     type: 'ALERT' | 'INFO' | 'SUCCESS';
     title: string;
