@@ -91,7 +91,8 @@ export const isUpcoming = (day: number) => {
 };
 
 // Helper to compress images before saving to Firestore (Limit to 1MB logic)
-export const compressImage = (base64Str: string, maxWidth = 300, quality = 0.7): Promise<string> => {
+// Alterado para PNG para preservar transparência e evitar fundos pretos indesejados
+export const compressImage = (base64Str: string, maxWidth = 300, quality = 0.8): Promise<string> => {
     return new Promise((resolve) => {
         const img = new Image();
         img.src = base64Str;
@@ -110,8 +111,12 @@ export const compressImage = (base64Str: string, maxWidth = 300, quality = 0.7):
             const ctx = canvas.getContext('2d');
             if (!ctx) return resolve(base64Str);
 
+            // Limpa o canvas para garantir transparência total no fundo
+            ctx.clearRect(0, 0, width, height);
             ctx.drawImage(img, 0, 0, width, height);
-            resolve(canvas.toDataURL('image/jpeg', quality));
+            
+            // Usamos PNG para logotipos para manter a transparência original
+            resolve(canvas.toDataURL('image/png'));
         };
         img.onerror = () => resolve(base64Str);
     });
@@ -132,6 +137,7 @@ export const extractDominantColor = (imageSrc: string): Promise<string> => {
             // Resize to small size for faster processing
             canvas.width = 50;
             canvas.height = 50;
+            ctx.clearRect(0, 0, 50, 50);
             ctx.drawImage(img, 0, 0, 50, 50);
 
             const imageData = ctx.getImageData(0, 0, 50, 50).data;
@@ -139,7 +145,8 @@ export const extractDominantColor = (imageSrc: string): Promise<string> => {
 
             for (let i = 0; i < imageData.length; i += 4) {
                 const alpha = imageData[i + 3];
-                if (alpha < 128) continue; // Skip transparent pixels
+                // Ignora pixels com transparência significativa (menos de 50% opaco)
+                if (alpha < 128) continue; 
 
                 const cr = imageData[i];
                 const cg = imageData[i + 1];
@@ -147,7 +154,7 @@ export const extractDominantColor = (imageSrc: string): Promise<string> => {
 
                 // Filter out nearly white and nearly black pixels to find the "Color"
                 const brightness = (cr + cg + cb) / 3;
-                if (brightness > 230 || brightness < 20) continue;
+                if (brightness > 240 || brightness < 15) continue;
 
                 r += cr;
                 g += cg;

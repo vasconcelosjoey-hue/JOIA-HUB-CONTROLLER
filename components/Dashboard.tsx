@@ -90,7 +90,8 @@ export const Dashboard: React.FC = () => {
           const reader = new FileReader();
           reader.onloadend = async () => {
               const result = reader.result as string;
-              const compressed = await compressImage(result, 200, 0.7); 
+              // Aumentamos levemente o maxWidth para logos ficarem mais nítidas
+              const compressed = await compressImage(result, 256, 0.8); 
               const autoColor = await extractDominantColor(compressed);
               setEditingProject({ ...editingProject, logo: compressed, brandColor: autoColor });
           };
@@ -175,9 +176,9 @@ export const Dashboard: React.FC = () => {
                   </div>
                   
                   <div className="p-6 space-y-6">
-                      <div className="flex flex-col sm:flex-row gap-5 items-center p-4 bg-gray-50 rounded-2xl border border-gray-200">
-                          <div className="w-24 h-24 rounded-xl bg-white border-2 border-dashed border-gray-300 flex items-center justify-center relative overflow-hidden cursor-pointer" onClick={() => fileInputRef.current?.click()}>
-                              {editingProject.logo ? <img src={editingProject.logo} className="w-full h-full object-contain p-2" /> : <Upload size={20} className="text-gray-400" />}
+                      <div className="flex flex-col sm:flex-row gap-5 items-center p-4 bg-gray-50/50 rounded-2xl border border-gray-100">
+                          <div className="w-24 h-24 rounded-xl bg-white border-2 border-dashed border-gray-200 flex items-center justify-center relative overflow-hidden cursor-pointer hover:border-black transition-colors" onClick={() => fileInputRef.current?.click()}>
+                              {editingProject.logo ? <img src={editingProject.logo} className="w-full h-full object-contain p-1" /> : <Upload size={20} className="text-gray-400" />}
                           </div>
                           <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleLogoUpload} />
                           <div className="flex-1 w-full">
@@ -302,7 +303,7 @@ export const Dashboard: React.FC = () => {
                 <div className="absolute top-0 left-0 w-full h-1" style={{ backgroundColor: project.brandColor || '#000' }}></div>
                 <div className="flex justify-between items-start mt-1">
                     {project.logo && (
-                        <div className="w-10 h-10 rounded-lg bg-gray-50 border border-gray-100 flex items-center justify-center p-1 overflow-hidden shadow-sm">
+                        <div className="w-10 h-10 flex items-center justify-center p-0 overflow-hidden">
                              <img src={project.logo} className="w-full h-full object-contain" />
                         </div>
                     )}
