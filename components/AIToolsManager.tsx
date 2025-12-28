@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Zap, Plus, Trash2, TrendingUp, Loader2, Search, Edit2, X, Save, ShieldCheck, Layers } from 'lucide-react';
 import { formatCurrency, formatCurrencyInput, parseCurrencyInput } from '../services/utils';
 import { useFirestoreCollection } from '../hooks/useFirestore';
@@ -42,10 +42,23 @@ export const AIToolsManager: React.FC = () => {
             .sort((a, b) => a.name.localeCompare(b.name));
     }, [projects]);
 
-    const responsibleOptions = ['CARRYON', 'SPENCER', 'JOI.A.'];
+    // Garantir que um projeto válido esteja selecionado por padrão se a lista não estiver vazia
+    useEffect(() => {
+        if (!linkedProjectId && linkingOptions.length > 0) {
+            setLinkedProjectId(linkingOptions[0].id);
+        }
+    }, [linkingOptions, linkedProjectId]);
+
+    const responsibleOptions = ['CARRYON', 'SPENCERF', 'JOI.A.'];
+
+    // Helper to handle legacy data normalization
+    const normalizeOwner = (owner?: string) => {
+        if (owner === 'SPENCER') return 'SPENCERF';
+        return owner || 'CARRYON';
+    };
 
     const findLinkedName = (id: string) => {
-        return projects.find(p => p.id === id)?.nome || 'Avulso';
+        return projects.find(p => p.id === id)?.nome || 'Projeto Desconhecido';
     };
 
     const handleAdd = async () => {
@@ -58,13 +71,15 @@ export const AIToolsManager: React.FC = () => {
                 dueDate: parseInt(newDate) || 1,
                 renovationCycle: 'MONTHLY',
                 owner: newOwner,
-                linkedProjectId: linkedProjectId || undefined,
+                linkedProjectId: linkedProjectId || (linkingOptions.length > 0 ? linkingOptions[0].id : undefined),
                 createdAt: new Date().toISOString()
             };
             await addTool(newTool);
             
             addToast('Ferramenta adicionada!', 'success');
-            setNewName(''); setNewDescription(''); setNewValue(''); setNewDate(''); setLinkedProjectId('');
+            setNewName(''); setNewDescription(''); setNewValue(''); setNewDate('');
+            // Reset to first option
+            if (linkingOptions.length > 0) setLinkedProjectId(linkingOptions[0].id);
         } catch(err) {
             addToast('Erro ao salvar.', 'error');
         } finally {
@@ -110,8 +125,8 @@ export const AIToolsManager: React.FC = () => {
     };
 
     const combinedList = [
-        ...tools.map(t => ({ ...t, type: 'TOOL' as const })),
-        ...platforms.map(p => ({ ...p, type: 'PLATFORM' as const }))
+        ...tools.map(t => ({ ...t, owner: normalizeOwner(t.owner), type: 'TOOL' as const })),
+        ...platforms.map(p => ({ ...p, owner: normalizeOwner(p.owner), type: 'PLATFORM' as const }))
     ].sort((a, b) => b.value - a.value);
 
     const filteredList = combinedList.filter(item => {
@@ -154,14 +169,13 @@ export const AIToolsManager: React.FC = () => {
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-1">
                                     <label className="text-[10px] font-bold text-gray-400">Responsável Financeiro</label>
-                                    <select value={editingItem.owner} onChange={e => setEditingItem({...editingItem, owner: e.target.value})} className="w-full border rounded-xl px-4 py-2.5 font-bold focus:ring-2 focus:ring-black outline-none appearance-none bg-white">
+                                    <select value={normalizeOwner(editingItem.owner)} onChange={e => setEditingItem({...editingItem, owner: e.target.value})} className="w-full border rounded-xl px-4 py-2.5 font-bold focus:ring-2 focus:ring-black outline-none appearance-none bg-white">
                                         {responsibleOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                                     </select>
                                 </div>
                                 <div className="space-y-1">
                                     <label className="text-[10px] font-bold text-gray-400">Vincular Projeto</label>
                                     <select value={editingItem.linkedProjectId || ''} onChange={e => setEditingItem({...editingItem, linkedProjectId: e.target.value})} className="w-full border rounded-xl px-4 py-2.5 font-bold focus:ring-2 focus:ring-black outline-none appearance-none bg-white">
-                                        <option value="">Nenhum (Avulso)</option>
                                         {linkingOptions.map(opt => <option key={opt.id} value={opt.id}>{opt.name}</option>)}
                                     </select>
                                 </div>
@@ -188,7 +202,6 @@ export const AIToolsManager: React.FC = () => {
                         <div className="space-y-1">
                             <label className="text-[8px] font-black text-gray-400 tracking-tighter uppercase">Vincular Projeto</label>
                             <select value={linkedProjectId} onKeyDown={(e) => handleKeyDown(e, handleAdd)} onChange={(e) => setLinkedProjectId(e.target.value)} className="w-full bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black appearance-none">
-                                <option value="">Nenhum (Avulso)</option>
                                 {linkingOptions.map(opt => <option key={opt.id} value={opt.id}>{opt.name}</option>)}
                             </select>
                         </div>

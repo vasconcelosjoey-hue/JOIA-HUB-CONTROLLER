@@ -10,7 +10,7 @@ interface Platform {
     client: string;
     value: number;
     dueDate: number;
-    owner?: 'CARRYON' | 'SPENCER' | 'JOI.A.';
+    owner?: 'CARRYON' | 'SPENCERF' | 'JOI.A.';
 }
 
 export const PlatformManager: React.FC = () => {
@@ -65,7 +65,10 @@ export const PlatformManager: React.FC = () => {
     const filteredPlatforms = platforms.filter(p => 
         p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
         p.client.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    ).map(p => ({
+        ...p,
+        owner: (p.owner === 'SPENCER' ? 'SPENCERF' : p.owner) as Platform['owner']
+    }));
 
     const totalCost = filteredPlatforms.reduce((acc, curr) => acc + curr.value, 0);
 
@@ -147,7 +150,7 @@ export const PlatformManager: React.FC = () => {
                                 className="w-full bg-gray-50 border border-gray-300 rounded-lg px-3 py-2.5 text-black font-bold focus:ring-2 focus:ring-black focus:outline-none transition-all text-sm appearance-none"
                             >
                                 <option value="CARRYON">CARRYON</option>
-                                <option value="SPENCER">SPENCER</option>
+                                <option value="SPENCERF">SPENCERF</option>
                                 <option value="JOI.A.">JOI.A.</option>
                             </select>
                         </div>
