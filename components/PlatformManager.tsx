@@ -67,7 +67,8 @@ export const PlatformManager: React.FC = () => {
         p.client.toLowerCase().includes(searchTerm.toLowerCase())
     ).map(p => ({
         ...p,
-        owner: (p.owner === 'SPENCER' ? 'SPENCERF' : p.owner) as Platform['owner']
+        // Cast para string para permitir a comparação com o valor legado 'SPENCER' sem erro de tipos no TS
+        owner: ((p.owner as string) === 'SPENCER' ? 'SPENCERF' : p.owner) as Platform['owner']
     }));
 
     const totalCost = filteredPlatforms.reduce((acc, curr) => acc + curr.value, 0);
