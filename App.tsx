@@ -34,13 +34,13 @@ function App() {
 
   const mainNavItems = [
     { id: 'dashboard', label: 'PROJETOS', icon: Target },
-    { id: 'ai-tools', label: 'IA TOOLS', icon: Cpu },
+    { id: 'ai-tools', label: 'FERRAMENTAS', icon: Cpu },
     { id: 'partnership', label: 'PARCERIAS', icon: Handshake },
     { id: 'expenses', label: 'DESPESAS', icon: Receipt },
   ];
 
   const systemNavItems = [
-    { id: 'balance', label: 'HEALTH', icon: Activity },
+    { id: 'balance', label: 'DASHBOARDS', icon: Activity },
     { id: 'meetings', label: 'REUNIÕES', icon: Video },
   ];
 
