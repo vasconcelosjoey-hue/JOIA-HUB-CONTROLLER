@@ -69,6 +69,7 @@ export interface Platform extends BaseEntity {
 
 // --- 5. EXPENSES DOMAIN ---
 export interface Expense extends BaseEntity {
+    title: string;
     category: string;
     description: string;
     value: number;
