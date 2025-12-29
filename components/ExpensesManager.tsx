@@ -167,15 +167,15 @@ export const ExpensesManager: React.FC = () => {
 
                             <div className="space-y-2">
                                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Categoria</label>
-                                <div className="grid grid-cols-6 gap-2">
+                                <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
                                     {categories.map(cat => (
                                         <button 
                                             key={cat.id}
                                             onClick={() => setEditingExpense({...editingExpense, category: cat.id})}
-                                            className={`p-2.5 rounded-xl border flex items-center justify-center transition-all ${editingExpense.category === cat.id ? 'bg-black text-white border-black shadow-lg scale-105' : 'bg-gray-50 border-gray-200 text-gray-400 hover:border-gray-300'}`}
-                                            title={cat.label}
+                                            className={`p-2 rounded-xl border flex flex-col items-center justify-center transition-all min-h-[60px] ${editingExpense.category === cat.id ? 'bg-black text-white border-black shadow-lg scale-105' : 'bg-gray-50 border-gray-200 text-gray-400 hover:border-gray-300'}`}
                                         >
                                             <cat.icon size={18} />
+                                            <span className="text-[7px] font-black uppercase mt-1 leading-none tracking-tighter">{cat.label}</span>
                                         </button>
                                     ))}
                                 </div>
@@ -257,15 +257,15 @@ export const ExpensesManager: React.FC = () => {
 
                         <div className="space-y-1.5">
                             <label className="text-[10px] font-bold text-gray-500 uppercase">Categoria</label>
-                            <div className="grid grid-cols-6 gap-2">
+                            <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
                                 {categories.map(cat => (
                                     <button 
                                         key={cat.id}
                                         onClick={() => setCategory(cat.id)}
-                                        className={`p-2.5 rounded-xl border flex items-center justify-center transition-all ${category === cat.id ? 'bg-black text-white border-black shadow-md' : 'bg-gray-50 border-gray-200 text-gray-400 hover:border-gray-300'}`}
-                                        title={cat.label}
+                                        className={`p-2 rounded-xl border flex flex-col items-center justify-center transition-all min-h-[60px] ${category === cat.id ? 'bg-black text-white border-black shadow-md' : 'bg-gray-50 border-gray-200 text-gray-400 hover:border-gray-300'}`}
                                     >
                                         <cat.icon size={18} />
+                                        <span className="text-[7px] font-black uppercase mt-1 leading-none tracking-tighter">{cat.label}</span>
                                     </button>
                                 ))}
                             </div>
