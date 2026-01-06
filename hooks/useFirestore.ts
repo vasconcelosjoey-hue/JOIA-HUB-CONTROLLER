@@ -87,7 +87,8 @@ export function useFirestoreDocument<T>(collectionName: string, docId: string, d
         return () => unsubscribe();
     }, [collectionName, docId]);
 
-    const setDocument = async (newData: T) => {
+    // Changed parameter type to Partial<T> to support partial updates since merge: true is used.
+    const setDocument = async (newData: Partial<T>) => {
         await setDoc(doc(db, collectionName, docId), {
             ...newData,
             updatedAt: new Date().toISOString()
