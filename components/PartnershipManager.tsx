@@ -1,13 +1,14 @@
 
-import React, { useState } from 'react';
-import { Plus, Trash2, Calculator, Save, Handshake, Loader2, ChevronDown, ChevronUp, Search, Edit2, X, Check } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Plus, Trash2, Calculator, Save, Handshake, Loader2, ChevronDown, ChevronUp, Search, Edit2, X, Check, QrCode, Copy, Sparkles } from 'lucide-react';
 import { formatCurrency } from '../services/utils';
-import { Partner, PartnershipCard } from '../types';
+import { Partner, PartnershipCard, PixKey } from '../types';
 import { useFirestoreCollection } from '../hooks/useFirestore';
 import { useToast } from '../context/ToastContext';
 
 export const PartnershipManager: React.FC = () => {
     const { data: cards, loading, addItem, updateItem, deleteItem } = useFirestoreCollection<PartnershipCard>('partnerships');
+    const { data: pixKeys, addItem: addPixKey, deleteItem: deletePixKey } = useFirestoreCollection<PixKey>('pix_keys');
     const { addToast } = useToast();
 
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -16,12 +17,30 @@ export const PartnershipManager: React.FC = () => {
     const [editingCard, setEditingCard] = useState<PartnershipCard | null>(null);
     const [isSaving, setIsSaving] = useState(false);
 
+    // Pix Popover States
+    const [isPixOpen, setIsPixOpen] = useState(false);
+    const [newPixType, setNewPixType] = useState<PixKey['type']>('ALEATORIA');
+    const [newPixLabel, setNewPixLabel] = useState('');
+    const [newPixValue, setNewPixValue] = useState('');
+    const [copyId, setCopyId] = useState<string | null>(null);
+    const pixRef = useRef<HTMLDivElement>(null);
+
     const [companyName, setCompanyName] = useState('');
     const [totalValue, setTotalValue] = useState<string>('');
     const [dueDay, setDueDay] = useState<string>('');
     
     const generateId = () => Math.random().toString(36).substring(2, 9);
     const [partners, setPartners] = useState<Partner[]>([{ id: generateId(), name: '', value: 0 }]);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (pixRef.current && !pixRef.current.contains(event.target as Node)) {
+                setIsPixOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     const numericTotal = parseFloat(totalValue) || 0;
     const distributedTotal = partners.reduce((acc, p) => acc + (p.value || 0), 0);
@@ -76,6 +95,30 @@ export const PartnershipManager: React.FC = () => {
         }
     };
 
+    const handleSavePix = async () => {
+        if (!newPixLabel || !newPixValue) return;
+        try {
+            await addPixKey({
+                label: newPixLabel,
+                type: newPixType,
+                key: newPixValue,
+                createdAt: new Date().toISOString()
+            } as PixKey);
+            addToast('Chave PIX salva!', 'success');
+            setNewPixLabel('');
+            setNewPixValue('');
+        } catch (err) {
+            addToast('Erro ao salvar PIX.', 'error');
+        }
+    };
+
+    const copyPix = (id: string, key: string) => {
+        navigator.clipboard.writeText(key);
+        setCopyId(id);
+        addToast('PIX copiado!', 'success');
+        setTimeout(() => setCopyId(null), 2000);
+    };
+
     const handleUpdateCard = async () => {
         if (!editingCard) return;
         setIsSaving(true);
@@ -107,9 +150,96 @@ export const PartnershipManager: React.FC = () => {
     const filteredCards = cards.filter(card => card.companyName.toLowerCase().includes(searchTerm.toLowerCase()));
 
     return (
-        <div className="space-y-6 animate-in fade-in duration-500 pb-20 md:pb-0">
+        <div className="space-y-6 animate-in fade-in duration-500 pb-20 md:pb-0 relative">
+            {/* Pix Key Popover Menu */}
+            <div className="absolute top-0 right-0 z-50 flex flex-col items-end" ref={pixRef}>
+                <button 
+                    onClick={() => setIsPixOpen(!isPixOpen)}
+                    className="flex items-center gap-2 bg-white border border-gray-200 px-4 py-2.5 rounded-xl shadow-sm hover:shadow-md transition-all font-black text-[10px] uppercase tracking-widest text-gray-500 hover:text-black hover:border-black"
+                >
+                    <QrCode size={14} className={isPixOpen ? 'text-black' : 'text-gray-400'} />
+                    Chaves PIX
+                    {isPixOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                </button>
+
+                {isPixOpen && (
+                    <div className="mt-2 w-80 bg-white border border-gray-200 rounded-3xl shadow-2xl animate-in slide-in-from-top-4 duration-300 overflow-hidden">
+                        <div className="p-4 bg-gray-50 border-b flex justify-between items-center">
+                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Suas Chaves PIX</span>
+                            <Sparkles size={14} className="text-amber-500" />
+                        </div>
+                        
+                        {/* PIX Form */}
+                        <div className="p-4 space-y-3 border-b border-gray-100 bg-white/50 backdrop-blur-sm">
+                            <div className="flex gap-2">
+                                <select 
+                                    value={newPixType} 
+                                    onChange={e => setNewPixType(e.target.value as any)}
+                                    className="bg-gray-50 border border-gray-200 rounded-lg px-2 py-1.5 text-[9px] font-black uppercase outline-none focus:border-black appearance-none w-20 text-center"
+                                >
+                                    <option value="ALEATORIA">ALEA</option>
+                                    <option value="CPF">CPF</option>
+                                    <option value="CNPJ">CNPJ</option>
+                                    <option value="EMAIL">EMAIL</option>
+                                    <option value="TELEFONE">TEL</option>
+                                </select>
+                                <input 
+                                    type="text" 
+                                    value={newPixLabel} 
+                                    onChange={e => setNewPixLabel(e.target.value)}
+                                    placeholder="Identificação (Ex: Joedge)" 
+                                    className="flex-1 bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 text-[10px] font-bold outline-none focus:border-black"
+                                />
+                            </div>
+                            <div className="flex gap-2">
+                                <input 
+                                    type="text" 
+                                    value={newPixValue} 
+                                    onChange={e => setNewPixValue(e.target.value)}
+                                    placeholder="A chave aqui..." 
+                                    className="flex-1 bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 text-[10px] font-mono outline-none focus:border-black"
+                                />
+                                <button onClick={handleSavePix} className="bg-black text-white p-2 rounded-lg hover:bg-gray-800 transition-colors">
+                                    <Plus size={14} />
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* PIX List */}
+                        <div className="max-h-60 overflow-y-auto custom-scrollbar divide-y divide-gray-50">
+                            {pixKeys.length === 0 ? (
+                                <div className="p-6 text-center text-gray-300 text-[10px] font-black uppercase italic">Nenhuma chave salva</div>
+                            ) : (
+                                pixKeys.map(k => (
+                                    <div key={k.id} className="p-3 hover:bg-gray-50 transition-colors group">
+                                        <div className="flex justify-between items-start mb-1">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-[8px] font-black bg-gray-200 px-1.5 py-0.5 rounded uppercase tracking-tighter">{k.type}</span>
+                                                <span className="text-[10px] font-black text-black uppercase">{k.label}</span>
+                                            </div>
+                                            <button onClick={() => deletePixKey(k.id)} className="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-500 transition-all">
+                                                <Trash2 size={12} />
+                                            </button>
+                                        </div>
+                                        <div className="flex items-center justify-between gap-2 bg-gray-100/50 rounded-lg p-2">
+                                            <span className="text-[10px] font-mono text-gray-500 truncate flex-1">{k.key}</span>
+                                            <button 
+                                                onClick={() => copyPix(k.id, k.key)}
+                                                className={`p-1.5 rounded-md transition-all ${copyId === k.id ? 'bg-emerald-500 text-white' : 'bg-white border text-gray-400 hover:text-black hover:border-black'}`}
+                                            >
+                                                {copyId === k.id ? <Check size={12} /> : <Copy size={12} />}
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+                )}
+            </div>
+
             {editingCard && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
                     <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col border border-gray-100 overflow-hidden">
                         <div className="p-6 border-b flex justify-between items-center bg-gray-50">
                             <h3 className="font-bold text-sm flex items-center gap-2">
@@ -179,7 +309,7 @@ export const PartnershipManager: React.FC = () => {
                 </div>
             )}
 
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start pt-12 md:pt-0">
                 <div className="bg-white rounded-[2rem] p-6 shadow-float border border-gray-200 relative overflow-hidden">
                     <div className="absolute top-0 left-0 w-full h-1.5 bg-black"></div>
                     <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-6 pb-2 border-b flex justify-between items-center">Configurar Rateio <Calculator size={14} /></h3>

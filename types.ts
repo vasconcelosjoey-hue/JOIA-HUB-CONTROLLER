@@ -43,6 +43,12 @@ export interface PartnershipCard extends BaseEntity {
     partners: Partner[];
 }
 
+export interface PixKey extends BaseEntity {
+    label: string;
+    type: 'CPF' | 'CNPJ' | 'EMAIL' | 'TELEFONE' | 'ALEATORIA';
+    key: string;
+}
+
 // --- 3. AI TOOLS DOMAIN ---
 export interface AITool extends BaseEntity {
     name: string;
