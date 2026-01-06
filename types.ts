@@ -47,6 +47,7 @@ export interface PixKey extends BaseEntity {
     label: string;
     type: 'CPF' | 'CNPJ' | 'EMAIL' | 'TELEFONE' | 'ALEATORIA';
     key: string;
+    bank?: string;
 }
 
 // --- 3. AI TOOLS DOMAIN ---

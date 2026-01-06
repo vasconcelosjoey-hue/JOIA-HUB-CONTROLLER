@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Plus, Trash2, Calculator, Save, Handshake, Loader2, ChevronDown, ChevronUp, Search, Edit2, X, Check, QrCode, Copy, Sparkles } from 'lucide-react';
+import { Plus, Trash2, Calculator, Save, Handshake, Loader2, ChevronDown, ChevronUp, Search, Edit2, X, Check, QrCode, Copy, Sparkles, Building2 } from 'lucide-react';
 import { formatCurrency } from '../services/utils';
 import { Partner, PartnershipCard, PixKey } from '../types';
 import { useFirestoreCollection } from '../hooks/useFirestore';
@@ -21,6 +21,7 @@ export const PartnershipManager: React.FC = () => {
     const [isPixOpen, setIsPixOpen] = useState(false);
     const [newPixType, setNewPixType] = useState<PixKey['type']>('ALEATORIA');
     const [newPixLabel, setNewPixLabel] = useState('');
+    const [newPixBank, setNewPixBank] = useState('');
     const [newPixValue, setNewPixValue] = useState('');
     const [copyId, setCopyId] = useState<string | null>(null);
     const pixRef = useRef<HTMLDivElement>(null);
@@ -96,17 +97,22 @@ export const PartnershipManager: React.FC = () => {
     };
 
     const handleSavePix = async () => {
-        if (!newPixLabel || !newPixValue) return;
+        if (!newPixLabel || !newPixValue) {
+            addToast('Preencha pelo menos Identificação e Chave.', 'warning');
+            return;
+        }
         try {
             await addPixKey({
-                label: newPixLabel,
+                label: newPixLabel.trim(),
                 type: newPixType,
-                key: newPixValue,
+                key: newPixValue.trim(),
+                bank: newPixBank.trim(),
                 createdAt: new Date().toISOString()
             } as PixKey);
             addToast('Chave PIX salva!', 'success');
             setNewPixLabel('');
             setNewPixValue('');
+            setNewPixBank('');
         } catch (err) {
             addToast('Erro ao salvar PIX.', 'error');
         }
@@ -163,7 +169,7 @@ export const PartnershipManager: React.FC = () => {
                 </button>
 
                 {isPixOpen && (
-                    <div className="mt-2 w-80 bg-white border border-gray-200 rounded-3xl shadow-2xl animate-in slide-in-from-top-4 duration-300 overflow-hidden">
+                    <div className="mt-2 w-[90vw] max-w-[340px] md:w-80 bg-white border border-gray-200 rounded-3xl shadow-2xl animate-in slide-in-from-top-4 duration-300 overflow-hidden right-0">
                         <div className="p-4 bg-gray-50 border-b flex justify-between items-center">
                             <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Suas Chaves PIX</span>
                             <Sparkles size={14} className="text-amber-500" />
@@ -171,11 +177,11 @@ export const PartnershipManager: React.FC = () => {
                         
                         {/* PIX Form */}
                         <div className="p-4 space-y-3 border-b border-gray-100 bg-white/50 backdrop-blur-sm">
-                            <div className="flex gap-2">
+                            <div className="grid grid-cols-2 gap-2">
                                 <select 
                                     value={newPixType} 
                                     onChange={e => setNewPixType(e.target.value as any)}
-                                    className="bg-gray-50 border border-gray-200 rounded-lg px-2 py-1.5 text-[9px] font-black uppercase outline-none focus:border-black appearance-none w-20 text-center"
+                                    className="bg-gray-50 border border-gray-200 rounded-lg px-2 py-1.5 text-[9px] font-black uppercase outline-none focus:border-black appearance-none w-full text-center"
                                 >
                                     <option value="ALEATORIA">ALEA</option>
                                     <option value="CPF">CPF</option>
@@ -185,12 +191,19 @@ export const PartnershipManager: React.FC = () => {
                                 </select>
                                 <input 
                                     type="text" 
-                                    value={newPixLabel} 
-                                    onChange={e => setNewPixLabel(e.target.value)}
-                                    placeholder="Identificação (Ex: Joedge)" 
-                                    className="flex-1 bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 text-[10px] font-bold outline-none focus:border-black"
+                                    value={newPixBank} 
+                                    onChange={e => setNewPixBank(e.target.value)}
+                                    placeholder="Banco (Ex: Nubank)" 
+                                    className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 text-[10px] font-bold outline-none focus:border-black w-full"
                                 />
                             </div>
+                            <input 
+                                type="text" 
+                                value={newPixLabel} 
+                                onChange={e => setNewPixLabel(e.target.value)}
+                                placeholder="Identificação (Ex: Joedge)" 
+                                className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 text-[10px] font-bold outline-none focus:border-black"
+                            />
                             <div className="flex gap-2">
                                 <input 
                                     type="text" 
@@ -199,33 +212,40 @@ export const PartnershipManager: React.FC = () => {
                                     placeholder="A chave aqui..." 
                                     className="flex-1 bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 text-[10px] font-mono outline-none focus:border-black"
                                 />
-                                <button onClick={handleSavePix} className="bg-black text-white p-2 rounded-lg hover:bg-gray-800 transition-colors">
+                                <button onClick={handleSavePix} className="bg-black text-white p-2 rounded-lg hover:bg-gray-800 transition-colors shrink-0">
                                     <Plus size={14} />
                                 </button>
                             </div>
                         </div>
 
                         {/* PIX List */}
-                        <div className="max-h-60 overflow-y-auto custom-scrollbar divide-y divide-gray-50">
+                        <div className="max-h-64 overflow-y-auto custom-scrollbar divide-y divide-gray-50">
                             {pixKeys.length === 0 ? (
-                                <div className="p-6 text-center text-gray-300 text-[10px] font-black uppercase italic">Nenhuma chave salva</div>
+                                <div className="p-8 text-center text-gray-300 text-[10px] font-black uppercase italic">Nenhuma chave salva</div>
                             ) : (
                                 pixKeys.map(k => (
                                     <div key={k.id} className="p-3 hover:bg-gray-50 transition-colors group">
-                                        <div className="flex justify-between items-start mb-1">
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-[8px] font-black bg-gray-200 px-1.5 py-0.5 rounded uppercase tracking-tighter">{k.type}</span>
-                                                <span className="text-[10px] font-black text-black uppercase">{k.label}</span>
+                                        <div className="flex justify-between items-start mb-1.5">
+                                            <div className="flex flex-col gap-0.5">
+                                                <div className="flex items-center gap-1.5">
+                                                    <span className="text-[7px] font-black bg-gray-200 px-1 py-0.5 rounded-sm uppercase tracking-tighter shrink-0">{k.type}</span>
+                                                    <span className="text-[10px] font-black text-black uppercase truncate max-w-[120px]">{k.label}</span>
+                                                </div>
+                                                {k.bank && (
+                                                    <div className="flex items-center gap-1 text-[8px] font-bold text-gray-400 uppercase">
+                                                        <Building2 size={8} /> {k.bank}
+                                                    </div>
+                                                )}
                                             </div>
-                                            <button onClick={() => deletePixKey(k.id)} className="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-500 transition-all">
+                                            <button onClick={() => deletePixKey(k.id)} className="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-500 transition-all p-1">
                                                 <Trash2 size={12} />
                                             </button>
                                         </div>
                                         <div className="flex items-center justify-between gap-2 bg-gray-100/50 rounded-lg p-2">
-                                            <span className="text-[10px] font-mono text-gray-500 truncate flex-1">{k.key}</span>
+                                            <span className="text-[10px] font-mono text-gray-500 truncate flex-1 break-all">{k.key}</span>
                                             <button 
                                                 onClick={() => copyPix(k.id, k.key)}
-                                                className={`p-1.5 rounded-md transition-all ${copyId === k.id ? 'bg-emerald-500 text-white' : 'bg-white border text-gray-400 hover:text-black hover:border-black'}`}
+                                                className={`p-1.5 rounded-md transition-all shrink-0 ${copyId === k.id ? 'bg-emerald-500 text-white' : 'bg-white border text-gray-400 hover:text-black hover:border-black shadow-sm'}`}
                                             >
                                                 {copyId === k.id ? <Check size={12} /> : <Copy size={12} />}
                                             </button>
@@ -242,34 +262,34 @@ export const PartnershipManager: React.FC = () => {
                 <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
                     <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col border border-gray-100 overflow-hidden">
                         <div className="p-6 border-b flex justify-between items-center bg-gray-50">
-                            <h3 className="font-bold text-sm flex items-center gap-2">
-                                <Edit2 size={16} /> Editar Parceria
+                            <h3 className="font-bold text-sm flex items-center gap-2 uppercase tracking-widest text-gray-400">
+                                <Edit2 size={16} className="text-black" /> Editar Parceria
                             </h3>
                             <button onClick={() => setEditingCard(null)} className="p-2 hover:bg-gray-200 rounded-full transition-colors"><X size={20} /></button>
                         </div>
                         <div className="p-6 space-y-5 overflow-y-auto custom-scrollbar flex-1">
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div className="space-y-1">
-                                    <label className="text-[10px] font-bold text-gray-400">Empresa</label>
-                                    <input type="text" value={editingCard.companyName} onKeyDown={(e) => handleKeyDown(e, handleUpdateCard)} onChange={e => setEditingCard({...editingCard, companyName: e.target.value})} className="w-full border rounded-xl px-4 py-2.5 font-bold focus:ring-2 focus:ring-black outline-none" />
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Empresa</label>
+                                    <input type="text" value={editingCard.companyName} onKeyDown={(e) => handleKeyDown(e, handleUpdateCard)} onChange={e => setEditingCard({...editingCard, companyName: e.target.value})} className="w-full border-2 border-gray-100 rounded-xl px-4 py-2.5 font-black focus:border-black outline-none transition-all" />
                                 </div>
                                 <div className="grid grid-cols-2 gap-2">
                                     <div className="space-y-1">
-                                        <label className="text-[10px] font-bold text-gray-400">Valor</label>
-                                        <input type="number" value={editingCard.totalValue} onKeyDown={(e) => handleKeyDown(e, handleUpdateCard)} onChange={e => setEditingCard({...editingCard, totalValue: parseFloat(e.target.value) || 0})} className="w-full border rounded-xl px-4 py-2.5 font-black focus:ring-2 focus:ring-black outline-none" />
+                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Valor</label>
+                                        <input type="number" value={editingCard.totalValue} onKeyDown={(e) => handleKeyDown(e, handleUpdateCard)} onChange={e => setEditingCard({...editingCard, totalValue: parseFloat(e.target.value) || 0})} className="w-full border-2 border-gray-100 rounded-xl px-4 py-2.5 font-black focus:border-black outline-none transition-all" />
                                     </div>
                                     <div className="space-y-1">
-                                        <label className="text-[10px] font-bold text-gray-400">Dia Pag.</label>
-                                        <input type="number" value={editingCard.dueDay} onKeyDown={(e) => handleKeyDown(e, handleUpdateCard)} onChange={e => setEditingCard({...editingCard, dueDay: parseInt(e.target.value) || 1})} className="w-full border rounded-xl px-4 py-2.5 font-bold focus:ring-2 focus:ring-black outline-none text-center" />
+                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Dia Pag.</label>
+                                        <input type="number" value={editingCard.dueDay} onKeyDown={(e) => handleKeyDown(e, handleUpdateCard)} onChange={e => setEditingCard({...editingCard, dueDay: parseInt(e.target.value) || 1})} className="w-full border-2 border-gray-100 rounded-xl px-4 py-2.5 font-black focus:border-black outline-none transition-all text-center" />
                                     </div>
                                 </div>
                             </div>
                             <div className="bg-gray-50 rounded-2xl p-4 border border-gray-200 space-y-4">
                                 <div className="flex justify-between items-center">
-                                    <label className="text-[10px] font-bold text-gray-400 tracking-widest uppercase">Beneficiários</label>
+                                    <label className="text-[10px] font-black text-gray-400 tracking-widest uppercase">Beneficiários</label>
                                     <button 
                                         onClick={() => setEditingCard({...editingCard, partners: autoDistribute(editingCard.totalValue, editingCard.partners)})} 
-                                        className="text-[10px] font-bold bg-black text-white px-3 py-1 rounded-lg"
+                                        className="text-[10px] font-black bg-black text-white px-3 py-1 rounded-lg shadow-md uppercase tracking-tighter"
                                     >
                                         AUTO RATEIO
                                     </button>
@@ -281,101 +301,143 @@ export const PartnershipManager: React.FC = () => {
                                                 const newPartners = [...editingCard.partners];
                                                 newPartners[idx].name = e.target.value;
                                                 setEditingCard({...editingCard, partners: newPartners});
-                                            }} placeholder="Nome" className="flex-1 bg-white border rounded-xl px-3 py-2 text-xs font-bold focus:border-black outline-none" />
+                                            }} placeholder="Nome" className="flex-1 bg-white border border-gray-200 rounded-xl px-3 py-2.5 text-xs font-black focus:border-black outline-none shadow-sm uppercase tracking-tight" />
                                             <input type="number" value={p.value} onChange={e => {
                                                 const newPartners = [...editingCard.partners];
                                                 newPartners[idx].value = parseFloat(e.target.value) || 0;
                                                 setEditingCard({...editingCard, partners: newPartners});
-                                            }} placeholder="Valor" className="w-24 bg-white border rounded-xl px-3 py-2 text-xs font-bold focus:border-black outline-none" />
+                                            }} placeholder="Valor" className="w-24 bg-white border border-gray-200 rounded-xl px-3 py-2.5 text-xs font-black focus:border-black outline-none shadow-sm" />
                                             <button onClick={() => {
                                                 const newPartners = editingCard.partners.filter((_, i) => i !== idx);
                                                 setEditingCard({...editingCard, partners: newPartners});
-                                            }} className="text-gray-300 hover:text-red-500 p-1"><Trash2 size={16} /></button>
+                                            }} className="text-gray-300 hover:text-red-500 p-1 transition-colors"><Trash2 size={16} /></button>
                                         </div>
                                     ))}
-                                    <button onClick={() => setEditingCard({...editingCard, partners: [...editingCard.partners, {id: generateId(), name: '', value: 0}]})} className="w-full py-2 border-2 border-dashed border-gray-300 rounded-xl text-gray-400 font-bold text-[10px] uppercase hover:border-black hover:text-black flex items-center justify-center gap-2 transition-all">
-                                        <Plus size={14} /> Adicionar
+                                    <button onClick={() => setEditingCard({...editingCard, partners: [...editingCard.partners, {id: generateId(), name: '', value: 0}]})} className="w-full py-2.5 border-2 border-dashed border-gray-300 rounded-xl text-gray-400 font-black text-[10px] uppercase hover:border-black hover:text-black flex items-center justify-center gap-2 transition-all">
+                                        <Plus size={14} /> Adicionar Sócio
                                     </button>
                                 </div>
                             </div>
                         </div>
-                        <div className="p-4 bg-gray-50 flex justify-end gap-2 shrink-0">
-                            <button onClick={() => setEditingCard(null)} className="px-5 py-2.5 font-bold text-gray-500 hover:bg-gray-200 rounded-xl">Cancelar</button>
-                            <button onClick={handleUpdateCard} disabled={isSaving} className="bg-black text-white px-6 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 shadow-lg hover:bg-gray-800 disabled:opacity-50">
-                                {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />} Atualizar
+                        <div className="p-6 bg-gray-50 flex justify-end gap-3 shrink-0">
+                            <button onClick={() => setEditingCard(null)} className="px-6 py-3 font-bold text-gray-500 hover:bg-gray-200 rounded-xl transition-all">Cancelar</button>
+                            <button onClick={handleUpdateCard} disabled={isSaving} className="bg-black text-white px-8 py-3 rounded-xl font-black text-xs uppercase tracking-widest flex items-center gap-2 shadow-xl hover:bg-gray-800 disabled:opacity-50 transition-all">
+                                {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />} Salvar Alterações
                             </button>
                         </div>
                     </div>
                 </div>
             )}
 
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start pt-12 md:pt-0">
-                <div className="bg-white rounded-[2rem] p-6 shadow-float border border-gray-200 relative overflow-hidden">
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start pt-14 md:pt-0">
+                {/* Form Creation Card */}
+                <div className="bg-white rounded-[2.5rem] p-6 md:p-8 shadow-float border border-gray-100 relative overflow-hidden group">
                     <div className="absolute top-0 left-0 w-full h-1.5 bg-black"></div>
-                    <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-6 pb-2 border-b flex justify-between items-center">Configurar Rateio <Calculator size={14} /></h3>
-                    <div className="space-y-5">
+                    <div className="absolute -right-8 -top-8 w-24 h-24 bg-gray-50 rounded-full group-hover:bg-black/5 transition-colors duration-700"></div>
+                    
+                    <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-8 pb-3 border-b flex justify-between items-center relative z-10">
+                        Configurar Rateio <Calculator size={14} className="text-black" />
+                    </h3>
+                    
+                    <div className="space-y-6 relative z-10">
                         <div className="space-y-1.5">
-                            <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Projeto / Empresa</label>
-                            <input type="text" value={companyName} onKeyDown={(e) => handleKeyDown(e, handleSaveCard)} onChange={e => setCompanyName(e.target.value)} placeholder="Nome" className="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 text-black font-bold focus:ring-2 focus:ring-black outline-none text-sm" />
+                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Projeto / Empresa</label>
+                            <input type="text" value={companyName} onKeyDown={(e) => handleKeyDown(e, handleSaveCard)} onChange={e => setCompanyName(e.target.value)} placeholder="Nome do Cliente" className="w-full bg-gray-50/50 border-2 border-transparent rounded-2xl px-5 py-3.5 text-black font-black focus:bg-white focus:border-black outline-none transition-all text-sm shadow-inner uppercase tracking-tight" />
                         </div>
+                        
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-1.5">
-                                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Valor R$</label>
-                                <input type="number" value={totalValue} onKeyDown={(e) => handleKeyDown(e, handleSaveCard)} onChange={e => setTotalValue(e.target.value)} placeholder="0.00" className="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 text-black font-bold focus:ring-2 focus:ring-black outline-none text-sm" />
+                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Valor Total R$</label>
+                                <input type="number" value={totalValue} onKeyDown={(e) => handleKeyDown(e, handleSaveCard)} onChange={e => setTotalValue(e.target.value)} placeholder="0.00" className="w-full bg-gray-50/50 border-2 border-transparent rounded-2xl px-5 py-3.5 text-black font-black focus:bg-white focus:border-black outline-none transition-all text-sm shadow-inner" />
                             </div>
                             <div className="space-y-1.5">
-                                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Dia Pag.</label>
-                                <input type="text" value={dueDay} onKeyDown={(e) => handleKeyDown(e, handleSaveCard)} onChange={e => setDueDay(e.target.value.replace(/\D/g, ''))} placeholder="DD" className="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 text-black font-bold focus:ring-2 focus:ring-black outline-none text-sm text-center" />
+                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Dia Pagamento</label>
+                                <input type="text" value={dueDay} onKeyDown={(e) => handleKeyDown(e, handleSaveCard)} onChange={e => setDueDay(e.target.value.replace(/\D/g, ''))} placeholder="DD" className="w-full bg-gray-50/50 border-2 border-transparent rounded-2xl px-5 py-3.5 text-black font-black focus:bg-white focus:border-black outline-none transition-all text-sm text-center shadow-inner" />
                             </div>
                         </div>
-                        <div className="bg-gray-50 rounded-2xl p-4 border border-gray-200 space-y-4">
-                            <div className="flex justify-between items-center"><label className="text-[10px] font-bold text-gray-400 tracking-widest uppercase">Distribuição</label><button onClick={() => setPartners(autoDistribute(numericTotal, partners))} className="text-[10px] font-bold bg-black text-white px-3 py-1 rounded-lg shadow-sm">AUTO RATEIO</button></div>
-                            <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1 custom-scrollbar">
+
+                        <div className="bg-gray-50/50 rounded-3xl p-5 border-2 border-gray-100/50 space-y-4 shadow-sm">
+                            <div className="flex justify-between items-center">
+                                <label className="text-[10px] font-black text-gray-400 tracking-widest uppercase">Distribuição de Lucro</label>
+                                <button onClick={() => setPartners(autoDistribute(numericTotal, partners))} className="text-[9px] font-black bg-black text-white px-3 py-1.5 rounded-lg shadow-lg uppercase tracking-tight">AUTO RATEIO</button>
+                            </div>
+                            
+                            <div className="space-y-3 max-h-[280px] overflow-y-auto pr-1 custom-scrollbar">
                                 {partners.map((partner) => (
-                                    <div key={partner.id} className="flex gap-2 items-center animate-in slide-in-from-left-2">
-                                        <input type="text" value={partner.name} onKeyDown={(e) => handleKeyDown(e, handleSaveCard)} onChange={(e) => updatePartner(partner.id, 'name', e.target.value)} placeholder="Sócio" className="flex-1 bg-white border border-gray-200 rounded-xl px-3 py-2.5 text-xs font-bold focus:border-black outline-none shadow-sm" />
-                                        <input type="number" value={partner.value || ''} onKeyDown={(e) => handleKeyDown(e, handleSaveCard)} onChange={(e) => updatePartner(partner.id, 'value', e.target.value)} placeholder="0.00" className="w-24 bg-white border border-gray-200 rounded-xl px-3 py-2.5 text-xs font-bold focus:border-black outline-none shadow-sm" />
-                                        <button onClick={() => handleRemovePartnerInput(partner.id)} className="text-gray-300 hover:text-red-500 p-1.5"><Trash2 size={16} /></button>
+                                    <div key={partner.id} className="flex gap-2 items-center animate-in slide-in-from-left-2 duration-300">
+                                        <input type="text" value={partner.name} onKeyDown={(e) => handleKeyDown(e, handleSaveCard)} onChange={(e) => updatePartner(partner.id, 'name', e.target.value)} placeholder="Sócio / Parceiro" className="flex-1 bg-white border border-gray-100 rounded-xl px-4 py-3 text-xs font-black focus:border-black outline-none shadow-sm uppercase tracking-tight" />
+                                        <input type="number" value={partner.value || ''} onKeyDown={(e) => handleKeyDown(e, handleSaveCard)} onChange={(e) => updatePartner(partner.id, 'value', e.target.value)} placeholder="0.00" className="w-24 bg-white border border-gray-100 rounded-xl px-4 py-3 text-xs font-black focus:border-black outline-none shadow-sm" />
+                                        <button onClick={() => handleRemovePartnerInput(partner.id)} className="text-gray-200 hover:text-red-500 p-2 transition-colors"><Trash2 size={16} /></button>
                                     </div>
                                 ))}
                             </div>
-                            <button onClick={handleAddPartnerInput} className="w-full py-3 border-2 border-dashed border-gray-300 rounded-2xl text-gray-400 font-bold text-[10px] uppercase hover:border-black hover:text-black flex items-center justify-center gap-2 transition-all"><Plus size={14} /> Novo</button>
+                            <button onClick={handleAddPartnerInput} className="w-full py-3.5 border-2 border-dashed border-gray-300 rounded-2xl text-gray-400 font-black text-[10px] uppercase hover:border-black hover:text-black flex items-center justify-center gap-2 transition-all shadow-sm">
+                                <Plus size={14} /> Novo Beneficiário
+                            </button>
                         </div>
-                        <div className={`rounded-2xl p-4 flex items-center justify-between border transition-all shadow-sm ${isBalanced ? 'bg-emerald-50 border-emerald-100' : 'bg-red-50 border-red-100'}`}>
-                            <div><p className={`text-[9px] font-black uppercase tracking-widest ${isBalanced ? 'text-emerald-700' : 'text-red-700'}`}>{isBalanced ? 'Saldo Verificado' : 'Diferença Pendente'}</p><p className="text-[10px] text-gray-500 font-bold mt-1">Total: {formatCurrency(distributedTotal)}</p></div>
-                            <p className={`text-xl font-black ${isBalanced ? 'text-emerald-600' : 'text-red-600'}`}>{formatCurrency(difference)}</p>
+
+                        <div className={`rounded-3xl p-5 flex items-center justify-between border-2 transition-all shadow-lg ${isBalanced ? 'bg-emerald-50 border-emerald-100 shadow-emerald-100/20' : 'bg-red-50 border-red-100 shadow-red-100/20'}`}>
+                            <div>
+                                <p className={`text-[9px] font-black uppercase tracking-widest ${isBalanced ? 'text-emerald-700' : 'text-red-700'}`}>{isBalanced ? 'Saldo Verificado' : 'Diferença Pendente'}</p>
+                                <p className="text-[10px] text-gray-500 font-bold mt-1 uppercase tracking-tight">Total Alocado: {formatCurrency(distributedTotal)}</p>
+                            </div>
+                            <p className={`text-2xl font-black ${isBalanced ? 'text-emerald-600' : 'text-red-600'} tracking-tighter`}>{formatCurrency(difference)}</p>
                         </div>
-                        <button onClick={handleSaveCard} className="w-full bg-black text-white py-4 rounded-2xl font-bold uppercase text-xs tracking-widest flex items-center justify-center gap-2 shadow-xl hover:bg-gray-800 disabled:opacity-50 transition-all">{isSubmitting ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />} Salvar Parceria</button>
+
+                        <button onClick={handleSaveCard} className="w-full bg-black text-white py-5 rounded-[1.5rem] font-black uppercase text-xs tracking-[0.2em] flex items-center justify-center gap-3 shadow-2xl hover:bg-zinc-800 disabled:opacity-50 transition-all">
+                            {isSubmitting ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />} Salvar Nova Parceria
+                        </button>
                     </div>
                 </div>
+
+                {/* List Side */}
                 <div className="space-y-4">
-                    <div className="relative">
-                        <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-                        <input type="text" placeholder="Filtrar por nome..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full bg-white border border-gray-200 rounded-[1.5rem] pl-11 pr-4 py-3.5 text-sm font-bold shadow-sm focus:ring-2 focus:ring-black outline-none" />
+                    <div className="relative group">
+                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-black transition-colors">
+                            <Search size={18} />
+                        </div>
+                        <input type="text" placeholder="Filtrar por nome do cliente..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full bg-white border-2 border-transparent rounded-[1.5rem] pl-11 pr-5 py-4 text-sm font-black shadow-apple focus:border-black outline-none transition-all uppercase tracking-tight" />
                     </div>
-                    <div className="grid grid-cols-1 gap-4 overflow-y-auto max-h-[70vh] custom-scrollbar pr-2">
+
+                    <div className="grid grid-cols-1 gap-4 overflow-y-auto max-h-[75vh] custom-scrollbar pr-1">
+                        {filteredCards.length === 0 && !loading && (
+                            <div className="p-16 text-center text-gray-300 flex flex-col items-center gap-4 bg-white rounded-[2rem] border border-gray-100">
+                                <Handshake size={48} strokeWidth={1} className="opacity-20" />
+                                <p className="text-[10px] font-black uppercase tracking-widest">Nenhuma parceria encontrada</p>
+                            </div>
+                        )}
                         {filteredCards.map(card => (
-                            <div key={card.id} onClick={() => toggleCard(card.id)} className="bg-white rounded-3xl p-5 shadow-apple hover:shadow-float transition-all border border-gray-100 group relative cursor-pointer animate-in fade-in">
-                                <div className="absolute top-5 right-5 flex gap-1 z-20">
-                                    <button onClick={(e) => { e.stopPropagation(); setEditingCard(card); }} className="text-gray-200 hover:text-black p-1.5 transition-colors"><Edit2 size={18} /></button>
-                                    <button onClick={(e) => handleConfirmDelete(card.id, e)} className="text-gray-200 hover:text-red-500 p-1.5 transition-colors"><Trash2 size={18} /></button>
+                            <div key={card.id} onClick={() => toggleCard(card.id)} className="bg-white rounded-[2rem] p-6 shadow-apple hover:shadow-float transition-all border-2 border-transparent hover:border-black/5 group relative cursor-pointer animate-in fade-in slide-in-from-bottom-2 duration-500">
+                                <div className="absolute top-6 right-6 flex gap-1 z-20">
+                                    <button onClick={(e) => { e.stopPropagation(); setEditingCard(card); }} className="text-gray-200 hover:text-black p-2 transition-all hover:bg-gray-50 rounded-lg"><Edit2 size={18} /></button>
+                                    <button onClick={(e) => handleConfirmDelete(card.id, e)} className="text-gray-200 hover:text-red-500 p-2 transition-all hover:bg-red-50 rounded-lg"><Trash2 size={18} /></button>
                                 </div>
+                                
                                 <div className="flex items-center gap-4">
+                                    <div className="w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-black group-hover:text-white transition-all duration-500 shrink-0 shadow-inner">
+                                        <Building2 size={24} strokeWidth={2.5} />
+                                    </div>
                                     <div className="flex-1 truncate">
-                                        <h4 className="font-bold text-base truncate text-gray-900">{card.companyName}</h4>
-                                        <div className="flex items-center gap-2 mt-1">
-                                            <span className="text-[11px] font-bold text-black">{formatCurrency(card.totalValue)}</span>
+                                        <h4 className="font-black text-base truncate text-gray-900 uppercase tracking-tight">{card.companyName}</h4>
+                                        <div className="flex items-center gap-3 mt-1.5">
+                                            <span className="text-sm font-black text-black">{formatCurrency(card.totalValue)}</span>
                                             <span className="w-1 h-1 rounded-full bg-gray-300"></span>
-                                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">Dia {card.dueDay}</span>
+                                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Dia {card.dueDay}</span>
                                         </div>
                                     </div>
-                                    {expandedCards.has(card.id) ? <ChevronUp size={20} className="text-gray-400" /> : <ChevronDown size={20} className="text-gray-400" />}
+                                    <div className="p-2 rounded-full hover:bg-gray-50">
+                                        {expandedCards.has(card.id) ? <ChevronUp size={20} className="text-black" /> : <ChevronDown size={20} className="text-gray-400" />}
+                                    </div>
                                 </div>
+                                
                                 {expandedCards.has(card.id) && (
-                                    <div className="mt-5 pt-5 border-t border-gray-50 space-y-2 animate-in slide-in-from-top-4">
+                                    <div className="mt-6 pt-6 border-t border-gray-50 space-y-2.5 animate-in slide-in-from-top-4 duration-500">
+                                        <div className="flex justify-between items-center mb-2">
+                                            <span className="text-[8px] font-black text-gray-400 uppercase tracking-[0.2em]">Distribuição por Sócio</span>
+                                        </div>
                                         {card.partners.map(p => (
-                                            <div key={p.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-xl border border-gray-100 shadow-sm">
-                                                <span className="font-bold text-xs text-gray-600 uppercase tracking-tight">{p.name}</span>
+                                            <div key={p.id} className="flex justify-between items-center p-4 bg-gray-50 rounded-2xl border border-gray-100/50 shadow-sm hover:bg-white transition-colors duration-300">
+                                                <span className="font-black text-[10px] text-gray-700 uppercase tracking-tighter">{p.name}</span>
                                                 <span className="font-black text-xs text-black">{formatCurrency(p.value)}</span>
                                             </div>
                                         ))}
