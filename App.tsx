@@ -96,9 +96,11 @@ function AppContent() {
 
       <aside className="hidden md:flex w-64 bg-white border-r border-gray-200 flex-col shrink-0 z-20 transition-all duration-300">
         <div className="flex flex-col h-full">
-          <div className="h-24 flex flex-col items-center justify-center px-4 border-b border-gray-100 group relative">
+          {/* Aumentado de h-24 para h-32 */}
+          <div className="h-32 flex flex-col items-center justify-center px-4 border-b border-gray-100 group relative">
              <div className="relative cursor-pointer group/logo" onClick={() => logoInputRef.current?.click()}>
-                <img src={appLogo} alt="CarryOn" className="max-h-14 w-auto object-contain transition-all group-hover/logo:opacity-30" />
+                {/* Aumentado de max-h-14 para max-h-20 (~50% maior) */}
+                <img src={appLogo} alt="CarryOn" className="max-h-20 w-auto object-contain transition-all group-hover/logo:opacity-30" />
                 <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/logo:opacity-100 transition-opacity">
                     {isUploadingLogo ? <Loader2 size={20} className="animate-spin text-black" /> : <ImageIcon size={20} className="text-black" />}
                 </div>
@@ -149,8 +151,8 @@ function AppContent() {
               <p className="hidden md:block text-[10px] font-bold text-gray-400 uppercase tracking-wider mt-1">HUB CarryOn Control</p>
             </div>
           </div>
-          {/* Logo mobile dinâmica */}
-          <div className="md:hidden h-8 flex items-center">
+          {/* Logo mobile dinâmica - Aumentado de h-8 para h-12 */}
+          <div className="md:hidden h-12 flex items-center">
              <img src={appLogo} alt="Logo" className="h-full w-auto object-contain" />
           </div>
           <button onClick={() => setIsAlertsOpen(true)} className="md:hidden relative p-2">
