@@ -8,7 +8,7 @@ import { useToast } from '../context/ToastContext';
 
 export const PartnershipManager: React.FC = () => {
     const { data: cards, loading, addItem, updateItem, deleteItem } = useFirestoreCollection<PartnershipCard>('partnerships');
-    const { data: pixKeys, addItem: addPixKey, deleteItem: deletePixKey } = useFirestoreCollection<PixKey>('pix_keys');
+    const { data: pixKeys, addItem: addPixKey, updateItem: updatePixKey, deleteItem: deletePixKey } = useFirestoreCollection<PixKey>('pix_keys');
     const { addToast } = useToast();
 
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -19,6 +19,7 @@ export const PartnershipManager: React.FC = () => {
 
     // Pix Popover States
     const [isPixOpen, setIsPixOpen] = useState(false);
+    const [editingPixId, setEditingPixId] = useState<string | null>(null);
     const [newPixType, setNewPixType] = useState<PixKey['type']>('ALEATORIA');
     const [newPixLabel, setNewPixLabel] = useState('');
     const [newPixBank, setNewPixBank] = useState('');
@@ -96,23 +97,47 @@ export const PartnershipManager: React.FC = () => {
         }
     };
 
+    const handleEditPix = (key: PixKey) => {
+        setEditingPixId(key.id);
+        setNewPixType(key.type);
+        setNewPixLabel(key.label);
+        setNewPixBank(key.bank || '');
+        setNewPixValue(key.key);
+    };
+
+    const cancelPixEdit = () => {
+        setEditingPixId(null);
+        setNewPixLabel('');
+        setNewPixValue('');
+        setNewPixBank('');
+        setNewPixType('ALEATORIA');
+    };
+
     const handleSavePix = async () => {
         if (!newPixLabel || !newPixValue) {
             addToast('Preencha pelo menos Identificação e Chave.', 'warning');
             return;
         }
         try {
-            await addPixKey({
-                label: newPixLabel.trim(),
-                type: newPixType,
-                key: newPixValue.trim(),
-                bank: newPixBank.trim(),
-                createdAt: new Date().toISOString()
-            } as PixKey);
-            addToast('Chave PIX salva!', 'success');
-            setNewPixLabel('');
-            setNewPixValue('');
-            setNewPixBank('');
+            if (editingPixId) {
+                await updatePixKey(editingPixId, {
+                    label: newPixLabel.trim(),
+                    type: newPixType,
+                    key: newPixValue.trim(),
+                    bank: newPixBank.trim(),
+                });
+                addToast('Chave PIX atualizada!', 'success');
+            } else {
+                await addPixKey({
+                    label: newPixLabel.trim(),
+                    type: newPixType,
+                    key: newPixValue.trim(),
+                    bank: newPixBank.trim(),
+                    createdAt: new Date().toISOString()
+                } as PixKey);
+                addToast('Chave PIX salva!', 'success');
+            }
+            cancelPixEdit();
         } catch (err) {
             addToast('Erro ao salvar PIX.', 'error');
         }
@@ -171,12 +196,14 @@ export const PartnershipManager: React.FC = () => {
                 {isPixOpen && (
                     <div className="mt-2 w-[90vw] max-w-[340px] md:w-80 bg-white border border-gray-200 rounded-3xl shadow-2xl animate-in slide-in-from-top-4 duration-300 overflow-hidden right-0">
                         <div className="p-4 bg-gray-50 border-b flex justify-between items-center">
-                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Suas Chaves PIX</span>
+                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                                {editingPixId ? 'Editando Chave' : 'Suas Chaves PIX'}
+                            </span>
                             <Sparkles size={14} className="text-amber-500" />
                         </div>
                         
                         {/* PIX Form */}
-                        <div className="p-4 space-y-3 border-b border-gray-100 bg-white/50 backdrop-blur-sm">
+                        <div className={`p-4 space-y-3 border-b border-gray-100 transition-colors ${editingPixId ? 'bg-amber-50/30' : 'bg-white/50 backdrop-blur-sm'}`}>
                             <div className="grid grid-cols-2 gap-2">
                                 <select 
                                     value={newPixType} 
@@ -212,8 +239,16 @@ export const PartnershipManager: React.FC = () => {
                                     placeholder="A chave aqui..." 
                                     className="flex-1 bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 text-[10px] font-mono outline-none focus:border-black"
                                 />
-                                <button onClick={handleSavePix} className="bg-black text-white p-2 rounded-lg hover:bg-gray-800 transition-colors shrink-0">
-                                    <Plus size={14} />
+                                {editingPixId && (
+                                    <button onClick={cancelPixEdit} className="bg-gray-200 text-gray-500 p-2 rounded-lg hover:bg-gray-300 transition-colors shrink-0">
+                                        <X size={14} />
+                                    </button>
+                                )}
+                                <button 
+                                    onClick={handleSavePix} 
+                                    className={`${editingPixId ? 'bg-amber-500' : 'bg-black'} text-white p-2 rounded-lg hover:opacity-80 transition-all shrink-0`}
+                                >
+                                    {editingPixId ? <Check size={14} /> : <Plus size={14} />}
                                 </button>
                             </div>
                         </div>
@@ -224,7 +259,7 @@ export const PartnershipManager: React.FC = () => {
                                 <div className="p-8 text-center text-gray-300 text-[10px] font-black uppercase italic">Nenhuma chave salva</div>
                             ) : (
                                 pixKeys.map(k => (
-                                    <div key={k.id} className="p-3 hover:bg-gray-50 transition-colors group">
+                                    <div key={k.id} className={`p-3 transition-colors group ${editingPixId === k.id ? 'bg-amber-50' : 'hover:bg-gray-50'}`}>
                                         <div className="flex justify-between items-start mb-1.5">
                                             <div className="flex flex-col gap-0.5">
                                                 <div className="flex items-center gap-1.5">
@@ -237,9 +272,22 @@ export const PartnershipManager: React.FC = () => {
                                                     </div>
                                                 )}
                                             </div>
-                                            <button onClick={() => deletePixKey(k.id)} className="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-500 transition-all p-1">
-                                                <Trash2 size={12} />
-                                            </button>
+                                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                                                <button 
+                                                    onClick={() => handleEditPix(k)}
+                                                    className="text-gray-300 hover:text-black p-1"
+                                                    title="Editar"
+                                                >
+                                                    <Edit2 size={12} />
+                                                </button>
+                                                <button 
+                                                    onClick={() => deletePixKey(k.id)} 
+                                                    className="text-gray-300 hover:text-red-500 p-1"
+                                                    title="Excluir"
+                                                >
+                                                    <Trash2 size={12} />
+                                                </button>
+                                            </div>
                                         </div>
                                         <div className="flex items-center justify-between gap-2 bg-gray-100/50 rounded-lg p-2">
                                             <span className="text-[10px] font-mono text-gray-500 truncate flex-1 break-all">{k.key}</span>
