@@ -2,19 +2,23 @@ import React, { useState } from 'react';
 import { Calendar, Check, Wand2, Copy, Sparkles, ExternalLink, MessageSquare, Loader2 } from 'lucide-react';
 import { useFirestoreDocument } from '../hooks/useFirestore';
 import { GLOBAL_SETTINGS_ID } from '../constants';
+import { useLocalStorageState } from '../hooks/useLocalStorage';
 
 interface MeetingCreatorProps {
     onBack: () => void;
 }
 
 export const MeetingCreator: React.FC<MeetingCreatorProps> = () => {
-    const [title, setTitle] = useState('');
-    const [date, setDate] = useState('');
-    const [time, setTime] = useState('');
-    const [duration, setDuration] = useState('60');
-    const [participants, setParticipants] = useState('');
-    const [smartBoxContent, setSmartBoxContent] = useState('');
-    const [generatedInvite, setGeneratedInvite] = useState('');
+    const emptyMeetingDraft = {
+        title: '',
+        date: '',
+        time: '',
+        duration: '60',
+        participants: '',
+        smartBoxContent: '',
+        generatedInvite: '',
+    };
+    const [meetingDraft, setMeetingDraft] = useLocalStorageState('carryon:draft:meetings:invite', emptyMeetingDraft);
     const [copied, setCopied] = useState(false);
     const [isThinking, setIsThinking] = useState(false);
     
@@ -26,34 +30,34 @@ export const MeetingCreator: React.FC<MeetingCreatorProps> = () => {
     const isGCalConnected = settings?.gcal_connected ?? false;
 
     const handleGenerate = () => {
-        if (!title || !date || !time || !smartBoxContent) return;
+        if (!meetingDraft.title || !meetingDraft.date || !meetingDraft.time || !meetingDraft.smartBoxContent) return;
         setIsThinking(true);
         setTimeout(() => {
-            const text = `🗓 **CONVITE: ${title}**\n\nOlá time,\n\nGostaria de agendar a seguinte reunião: **${title}**.\n\n**Pauta / Assuntos:**\n${smartBoxContent}\n\n📍 **Detalhes:**\nData: ${date.split('-').reverse().join('/')}\nHorário: ${time}\nDuração: ${duration} min\nLink: Google Meet (Automático no Evento)\n\nConto com a presença de todos.`;
-            setGeneratedInvite(text.trim());
+            const text = `🗓 **CONVITE: ${meetingDraft.title}**\n\nOlá time,\n\nGostaria de agendar a seguinte reunião: **${meetingDraft.title}**.\n\n**Pauta / Assuntos:**\n${meetingDraft.smartBoxContent}\n\n📍 **Detalhes:**\nData: ${meetingDraft.date.split('-').reverse().join('/')}\nHorário: ${meetingDraft.time}\nDuração: ${meetingDraft.duration} min\nLink: Google Meet (Automático no Evento)\n\nConto com a presença de todos.`;
+            setMeetingDraft((currentDraft) => ({ ...currentDraft, generatedInvite: text.trim() }));
             setIsThinking(false);
         }, 1000);
     };
 
     const copyToClipboard = () => {
-        navigator.clipboard.writeText(generatedInvite);
+        navigator.clipboard.writeText(meetingDraft.generatedInvite);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
     };
 
     const handleAddToGoogleCalendar = () => {
-        if (!date || !time || !title) return;
-        const startDateTime = new Date(`${date}T${time}:00`);
-        const endDateTime = new Date(startDateTime.getTime() + (parseInt(duration) * 60000));
+        if (!meetingDraft.date || !meetingDraft.time || !meetingDraft.title) return;
+        const startDateTime = new Date(`${meetingDraft.date}T${meetingDraft.time}:00`);
+        const endDateTime = new Date(startDateTime.getTime() + (parseInt(meetingDraft.duration) * 60000));
         const formatTime = (d: Date) => d.toISOString().replace(/-|:|\.\d+/g, '');
         const start = formatTime(startDateTime);
         const end = formatTime(endDateTime);
         const gCalUrl = new URL('https://calendar.google.com/calendar/render');
         gCalUrl.searchParams.append('action', 'TEMPLATE');
-        gCalUrl.searchParams.append('text', title);
+        gCalUrl.searchParams.append('text', meetingDraft.title);
         gCalUrl.searchParams.append('dates', `${start}/${end}`);
-        gCalUrl.searchParams.append('details', generatedInvite);
-        gCalUrl.searchParams.append('add', participants);
+        gCalUrl.searchParams.append('details', meetingDraft.generatedInvite);
+        gCalUrl.searchParams.append('add', meetingDraft.participants);
         gCalUrl.searchParams.append('location', 'Google Meet'); 
         window.open(gCalUrl.toString(), '_blank');
     };
@@ -77,9 +81,9 @@ export const MeetingCreator: React.FC<MeetingCreatorProps> = () => {
                              <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Título da Reunião</label>
                             <input 
                                 type="text"
-                                value={title}
+                                value={meetingDraft.title}
                                 onKeyDown={handleKeyDown}
-                                onChange={(e) => setTitle(e.target.value)}
+                                onChange={(e) => setMeetingDraft({ ...meetingDraft, title: e.target.value })}
                                 className="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 text-black font-bold focus:outline-none focus:ring-2 focus:ring-black transition-all text-sm"
                                 placeholder="Pauta da conversa..."
                             />
@@ -90,9 +94,9 @@ export const MeetingCreator: React.FC<MeetingCreatorProps> = () => {
                                 <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Data</label>
                                 <input 
                                     type="date"
-                                    value={date}
+                                    value={meetingDraft.date}
                                     onKeyDown={handleKeyDown}
-                                    onChange={(e) => setDate(e.target.value)}
+                                    onChange={(e) => setMeetingDraft({ ...meetingDraft, date: e.target.value })}
                                     className="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-3 text-black font-bold focus:outline-none focus:ring-2 focus:ring-black transition-all text-sm"
                                 />
                             </div>
@@ -100,9 +104,9 @@ export const MeetingCreator: React.FC<MeetingCreatorProps> = () => {
                                 <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Hora</label>
                                 <input 
                                     type="time"
-                                    value={time}
+                                    value={meetingDraft.time}
                                     onKeyDown={handleKeyDown}
-                                    onChange={(e) => setTime(e.target.value)}
+                                    onChange={(e) => setMeetingDraft({ ...meetingDraft, time: e.target.value })}
                                     className="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-3 text-black font-bold focus:outline-none focus:ring-2 focus:ring-black transition-all text-sm"
                                 />
                             </div>
@@ -114,8 +118,8 @@ export const MeetingCreator: React.FC<MeetingCreatorProps> = () => {
                             </label>
                             <div className="relative">
                                 <textarea 
-                                    value={smartBoxContent}
-                                    onChange={(e) => setSmartBoxContent(e.target.value)}
+                                    value={meetingDraft.smartBoxContent}
+                                    onChange={(e) => setMeetingDraft({ ...meetingDraft, smartBoxContent: e.target.value })}
                                     className="w-full bg-purple-50/50 border border-purple-200 rounded-2xl px-4 py-3 text-black font-medium focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all min-h-[120px] resize-none text-sm leading-relaxed"
                                     placeholder="Descreva o que será discutido para gerar o convite..."
                                 />
@@ -140,9 +144,9 @@ export const MeetingCreator: React.FC<MeetingCreatorProps> = () => {
 
                         <button 
                             onClick={handleGenerate}
-                            disabled={!title || !date || !time || !smartBoxContent || isThinking}
+                            disabled={!meetingDraft.title || !meetingDraft.date || !meetingDraft.time || !meetingDraft.smartBoxContent || isThinking}
                             className={`w-full py-4 rounded-2xl font-black text-xs tracking-widest uppercase flex items-center justify-center gap-3 transition-all shadow-xl ${
-                                (!title || !date || !time || !smartBoxContent) ? 'bg-gray-100 text-gray-400' :
+                                (!meetingDraft.title || !meetingDraft.date || !meetingDraft.time || !meetingDraft.smartBoxContent) ? 'bg-gray-100 text-gray-400' :
                                 'bg-black text-white hover:bg-gray-800'
                             }`}
                         >
@@ -155,10 +159,10 @@ export const MeetingCreator: React.FC<MeetingCreatorProps> = () => {
                     <div className="bg-white rounded-[2rem] p-6 md:p-8 shadow-float border border-gray-200 h-full flex flex-col">
                         <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-6 border-b border-gray-100 pb-3">Preview do Convite</h3>
                         
-                        {generatedInvite ? (
+                        {meetingDraft.generatedInvite ? (
                             <div className="flex flex-col h-full animate-in zoom-in-95 duration-300">
                                 <div className="bg-gray-50 rounded-2xl p-5 font-mono text-xs font-medium text-gray-800 whitespace-pre-wrap border border-gray-200 leading-relaxed flex-1 overflow-y-auto custom-scrollbar shadow-inner">
-                                    {generatedInvite}
+                                    {meetingDraft.generatedInvite}
                                 </div>
                                 <div className="mt-6 flex flex-col sm:flex-row gap-3">
                                     <button 

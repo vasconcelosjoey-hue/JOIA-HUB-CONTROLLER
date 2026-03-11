@@ -5,6 +5,7 @@ import { formatCurrency } from '../services/utils';
 import { Partner, PartnershipCard, PixKey } from '../types';
 import { useFirestoreCollection } from '../hooks/useFirestore';
 import { useToast } from '../context/ToastContext';
+import { useLocalStorageState } from '../hooks/useLocalStorage';
 
 export const PartnershipManager: React.FC = () => {
     const { data: cards, loading, addItem, updateItem, deleteItem } = useFirestoreCollection<PartnershipCard>('partnerships');
@@ -27,12 +28,14 @@ export const PartnershipManager: React.FC = () => {
     const [copyId, setCopyId] = useState<string | null>(null);
     const pixRef = useRef<HTMLDivElement>(null);
 
-    const [companyName, setCompanyName] = useState('');
-    const [totalValue, setTotalValue] = useState<string>('');
-    const [dueDay, setDueDay] = useState<string>('');
-    
     const generateId = () => Math.random().toString(36).substring(2, 9);
-    const [partners, setPartners] = useState<Partner[]>([{ id: generateId(), name: '', value: 0 }]);
+    const emptyPartnershipDraft = {
+        companyName: '',
+        totalValue: '',
+        dueDay: '',
+        partners: [{ id: generateId(), name: '', value: 0 } as Partner],
+    };
+    const [partnershipDraft, setPartnershipDraft, clearPartnershipDraft] = useLocalStorageState('carryon:draft:partnership:new-card', emptyPartnershipDraft);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -44,8 +47,8 @@ export const PartnershipManager: React.FC = () => {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    const numericTotal = parseFloat(totalValue) || 0;
-    const distributedTotal = partners.reduce((acc, p) => acc + (p.value || 0), 0);
+    const numericTotal = parseFloat(partnershipDraft.totalValue) || 0;
+    const distributedTotal = partnershipDraft.partners.reduce((acc, p) => acc + (p.value || 0), 0);
     const difference = numericTotal - distributedTotal;
     const isBalanced = Math.abs(difference) < 0.05;
 
@@ -57,11 +60,14 @@ export const PartnershipManager: React.FC = () => {
         });
     };
 
-    const handleAddPartnerInput = () => setPartners([...partners, { id: generateId(), name: '', value: 0 }]);
-    const handleRemovePartnerInput = (id: string) => setPartners(partners.filter(p => p.id !== id));
+    const handleAddPartnerInput = () => setPartnershipDraft({ ...partnershipDraft, partners: [...partnershipDraft.partners, { id: generateId(), name: '', value: 0 }] });
+    const handleRemovePartnerInput = (id: string) => setPartnershipDraft({ ...partnershipDraft, partners: partnershipDraft.partners.filter(p => p.id !== id) });
 
     const updatePartner = (id: string, field: 'name' | 'value', val: string) => {
-        setPartners(partners.map(p => p.id === id ? { ...p, [field]: field === 'value' ? (parseFloat(val) || 0) : val } : p));
+        setPartnershipDraft({
+            ...partnershipDraft,
+            partners: partnershipDraft.partners.map(p => p.id === id ? { ...p, [field]: field === 'value' ? (parseFloat(val) || 0) : val } : p),
+        });
     };
 
     const autoDistribute = (targetTotal: number, targetPartners: Partner[]) => {
@@ -82,14 +88,14 @@ export const PartnershipManager: React.FC = () => {
         setIsSubmitting(true);
         try {
             await addItem({ 
-                companyName: companyName || 'Parceria Sem Nome', 
+                companyName: partnershipDraft.companyName || 'Parceria Sem Nome', 
                 totalValue: numericTotal, 
-                dueDay: parseInt(dueDay) || 1, 
-                partners: [...partners],
+                dueDay: parseInt(partnershipDraft.dueDay) || 1, 
+                partners: [...partnershipDraft.partners],
                 createdAt: new Date().toISOString()
             });
             addToast('Parceria registrada!', 'success');
-            setCompanyName(''); setTotalValue(''); setDueDay(''); setPartners([{ id: generateId(), name: '', value: 0 }]);
+            clearPartnershipDraft();
         } catch(err) {
             addToast('Erro ao salvar.', 'error');
         } finally {
@@ -390,28 +396,28 @@ export const PartnershipManager: React.FC = () => {
                     <div className="space-y-6 relative z-10">
                         <div className="space-y-1.5">
                             <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Projeto / Empresa</label>
-                            <input type="text" value={companyName} onKeyDown={(e) => handleKeyDown(e, handleSaveCard)} onChange={e => setCompanyName(e.target.value)} placeholder="Nome do Cliente" className="w-full bg-gray-50/50 border-2 border-transparent rounded-2xl px-5 py-3.5 text-black font-black focus:bg-white focus:border-black outline-none transition-all text-sm shadow-inner uppercase tracking-tight" />
+                            <input type="text" value={partnershipDraft.companyName} onKeyDown={(e) => handleKeyDown(e, handleSaveCard)} onChange={e => setPartnershipDraft({ ...partnershipDraft, companyName: e.target.value })} placeholder="Nome do Cliente" className="w-full bg-gray-50/50 border-2 border-transparent rounded-2xl px-5 py-3.5 text-black font-black focus:bg-white focus:border-black outline-none transition-all text-sm shadow-inner uppercase tracking-tight" />
                         </div>
                         
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-1.5">
                                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Valor Total R$</label>
-                                <input type="number" value={totalValue} onKeyDown={(e) => handleKeyDown(e, handleSaveCard)} onChange={e => setTotalValue(e.target.value)} placeholder="0.00" className="w-full bg-gray-50/50 border-2 border-transparent rounded-2xl px-5 py-3.5 text-black font-black focus:bg-white focus:border-black outline-none transition-all text-sm shadow-inner" />
+                                <input type="number" value={partnershipDraft.totalValue} onKeyDown={(e) => handleKeyDown(e, handleSaveCard)} onChange={e => setPartnershipDraft({ ...partnershipDraft, totalValue: e.target.value })} placeholder="0.00" className="w-full bg-gray-50/50 border-2 border-transparent rounded-2xl px-5 py-3.5 text-black font-black focus:bg-white focus:border-black outline-none transition-all text-sm shadow-inner" />
                             </div>
                             <div className="space-y-1.5">
                                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Dia Pagamento</label>
-                                <input type="text" value={dueDay} onKeyDown={(e) => handleKeyDown(e, handleSaveCard)} onChange={e => setDueDay(e.target.value.replace(/\D/g, ''))} placeholder="DD" className="w-full bg-gray-50/50 border-2 border-transparent rounded-2xl px-5 py-3.5 text-black font-black focus:bg-white focus:border-black outline-none transition-all text-sm text-center shadow-inner" />
+                                <input type="text" value={partnershipDraft.dueDay} onKeyDown={(e) => handleKeyDown(e, handleSaveCard)} onChange={e => setPartnershipDraft({ ...partnershipDraft, dueDay: e.target.value.replace(/\D/g, '') })} placeholder="DD" className="w-full bg-gray-50/50 border-2 border-transparent rounded-2xl px-5 py-3.5 text-black font-black focus:bg-white focus:border-black outline-none transition-all text-sm text-center shadow-inner" />
                             </div>
                         </div>
 
                         <div className="bg-gray-50/50 rounded-3xl p-5 border-2 border-gray-100/50 space-y-4 shadow-sm">
                             <div className="flex justify-between items-center">
                                 <label className="text-[10px] font-black text-gray-400 tracking-widest uppercase">Distribuição de Lucro</label>
-                                <button onClick={() => setPartners(autoDistribute(numericTotal, partners))} className="text-[9px] font-black bg-black text-white px-3 py-1.5 rounded-lg shadow-lg uppercase tracking-tight">AUTO RATEIO</button>
+                                <button onClick={() => setPartnershipDraft({ ...partnershipDraft, partners: autoDistribute(numericTotal, partnershipDraft.partners) })} className="text-[9px] font-black bg-black text-white px-3 py-1.5 rounded-lg shadow-lg uppercase tracking-tight">AUTO RATEIO</button>
                             </div>
                             
                             <div className="space-y-3 max-h-[280px] overflow-y-auto pr-1 custom-scrollbar">
-                                {partners.map((partner) => (
+                                {partnershipDraft.partners.map((partner) => (
                                     <div key={partner.id} className="flex gap-2 items-center animate-in slide-in-from-left-2 duration-300">
                                         <input type="text" value={partner.name} onKeyDown={(e) => handleKeyDown(e, handleSaveCard)} onChange={(e) => updatePartner(partner.id, 'name', e.target.value)} placeholder="Sócio / Parceiro" className="flex-1 bg-white border border-gray-100 rounded-xl px-4 py-3 text-xs font-black focus:border-black outline-none shadow-sm uppercase tracking-tight" />
                                         <input type="number" value={partner.value || ''} onKeyDown={(e) => handleKeyDown(e, handleSaveCard)} onChange={(e) => updatePartner(partner.id, 'value', e.target.value)} placeholder="0.00" className="w-24 bg-white border border-gray-100 rounded-xl px-4 py-3 text-xs font-black focus:border-black outline-none shadow-sm" />

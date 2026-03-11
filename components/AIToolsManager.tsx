@@ -6,6 +6,7 @@ import { useFirestoreCollection } from '../hooks/useFirestore';
 import { CpuArchitecture } from './ui/cpu-architecture';
 import { Project, AITool, Platform, PartnershipCard } from '../types';
 import { useToast } from '../context/ToastContext';
+import { useLocalStorageState } from '../hooks/useLocalStorage';
 
 export const AIToolsManager: React.FC = () => {
     const { data: tools, loading: loadingTools, addItem: addTool, updateItem: updateTool, deleteItem: deleteTool } = useFirestoreCollection<AITool>('ai_tools');
@@ -14,15 +15,17 @@ export const AIToolsManager: React.FC = () => {
     const { addToast } = useToast();
     
     const loading = loadingTools || loadingPlatforms;
+    const emptyToolDraft = {
+        name: '',
+        description: '',
+        value: '',
+        dueDate: '',
+        owner: 'CARRYON',
+        linkedProjectId: '',
+    };
 
     const [isSubmitting, setIsSubmitting] = useState(false);
-    
-    const [newName, setNewName] = useState('');
-    const [newDescription, setNewDescription] = useState('');
-    const [newValue, setNewValue] = useState('');
-    const [newDate, setNewDate] = useState('');
-    const [newOwner, setNewOwner] = useState('CARRYON');
-    const [linkedProjectId, setLinkedProjectId] = useState('');
+    const [toolDraft, setToolDraft, clearToolDraft] = useLocalStorageState('carryon:draft:ai-tools:new-tool', emptyToolDraft);
     
     const [searchTerm, setSearchTerm] = useState('');
     const [editingItem, setEditingItem] = useState<any | null>(null);
@@ -42,10 +45,10 @@ export const AIToolsManager: React.FC = () => {
     }, [projects]);
 
     useEffect(() => {
-        if (!linkedProjectId && linkingOptions.length > 0) {
-            setLinkedProjectId(linkingOptions[0].id);
+        if (!toolDraft.linkedProjectId && linkingOptions.length > 0) {
+            setToolDraft((currentDraft) => ({ ...currentDraft, linkedProjectId: linkingOptions[0].id }));
         }
-    }, [linkingOptions, linkedProjectId]);
+    }, [linkingOptions, toolDraft.linkedProjectId, setToolDraft]);
 
     const responsibleOptions = ['CARRYON', 'SPENCERF', 'JOI.A.'];
 
@@ -59,27 +62,29 @@ export const AIToolsManager: React.FC = () => {
     };
 
     const handleAdd = async () => {
-        if (!newName) {
+        if (!toolDraft.name) {
             addToast('Insira o nome da ferramenta.', 'warning');
             return;
         }
         setIsSubmitting(true);
         try {
             const newTool: Omit<AITool, 'id'> = {
-                name: newName.trim(),
-                description: newDescription.trim(),
-                value: parseCurrencyInput(newValue),
-                dueDate: parseInt(newDate) || 1,
+                name: toolDraft.name.trim(),
+                description: toolDraft.description.trim(),
+                value: parseCurrencyInput(toolDraft.value),
+                dueDate: parseInt(toolDraft.dueDate) || 1,
                 renovationCycle: 'MONTHLY',
-                owner: newOwner,
-                linkedProjectId: linkedProjectId || (linkingOptions.length > 0 ? linkingOptions[0].id : undefined),
+                owner: toolDraft.owner,
+                linkedProjectId: toolDraft.linkedProjectId || (linkingOptions.length > 0 ? linkingOptions[0].id : undefined),
                 createdAt: new Date().toISOString()
             };
             await addTool(newTool);
             
             addToast('Ferramenta adicionada!', 'success');
-            setNewName(''); setNewDescription(''); setNewValue(''); setNewDate('');
-            if (linkingOptions.length > 0) setLinkedProjectId(linkingOptions[0].id);
+            clearToolDraft();
+            if (linkingOptions.length > 0) {
+                setToolDraft((currentDraft) => ({ ...currentDraft, linkedProjectId: linkingOptions[0].id }));
+            }
         } catch(err) {
             addToast('Erro ao salvar.', 'error');
         } finally {
@@ -211,19 +216,19 @@ export const AIToolsManager: React.FC = () => {
                     <div className="space-y-5">
                         <div className="space-y-2">
                             <label className="text-[11px] font-black text-zinc-400 uppercase tracking-[0.1em]">Nome da Ferramenta</label>
-                            <input type="text" value={newName} onKeyDown={(e) => handleKeyDown(e, handleAdd)} onChange={e => setNewName(e.target.value)} placeholder="Ex: ChatGPT Plus" className="w-full bg-zinc-50 border-2 border-transparent rounded-2xl px-5 py-4 text-base font-black focus:bg-white focus:border-black outline-none transition-all shadow-sm placeholder:text-zinc-300" />
+                            <input type="text" value={toolDraft.name} onKeyDown={(e) => handleKeyDown(e, handleAdd)} onChange={e => setToolDraft({ ...toolDraft, name: e.target.value })} placeholder="Ex: ChatGPT Plus" className="w-full bg-zinc-50 border-2 border-transparent rounded-2xl px-5 py-4 text-base font-black focus:bg-white focus:border-black outline-none transition-all shadow-sm placeholder:text-zinc-300" />
                         </div>
                         
                         <div className="space-y-2">
                             <label className="text-[11px] font-black text-zinc-400 uppercase tracking-[0.1em]">Breve Descrição</label>
-                            <input type="text" value={newDescription} onKeyDown={(e) => handleKeyDown(e, handleAdd)} onChange={e => setNewDescription(e.target.value)} placeholder="Para que serve?" className="w-full bg-zinc-50 border-2 border-transparent rounded-2xl px-5 py-4 text-sm font-bold focus:bg-white focus:border-black outline-none transition-all shadow-sm placeholder:text-zinc-300" />
+                            <input type="text" value={toolDraft.description} onKeyDown={(e) => handleKeyDown(e, handleAdd)} onChange={e => setToolDraft({ ...toolDraft, description: e.target.value })} placeholder="Para que serve?" className="w-full bg-zinc-50 border-2 border-transparent rounded-2xl px-5 py-4 text-sm font-bold focus:bg-white focus:border-black outline-none transition-all shadow-sm placeholder:text-zinc-300" />
                         </div>
                         
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                              <div className="space-y-2">
                                 <label className="text-[11px] font-black text-zinc-400 uppercase tracking-tight">Vincular Projeto</label>
                                 <div className="relative">
-                                    <select value={linkedProjectId} onKeyDown={(e) => handleKeyDown(e, handleAdd)} onChange={(e) => setLinkedProjectId(e.target.value)} className="w-full bg-zinc-50 border-2 border-transparent rounded-2xl px-5 py-4 pr-10 text-[12px] font-black outline-none focus:bg-white focus:border-black appearance-none transition-all shadow-sm">
+                                    <select value={toolDraft.linkedProjectId} onKeyDown={(e) => handleKeyDown(e, handleAdd)} onChange={(e) => setToolDraft({ ...toolDraft, linkedProjectId: e.target.value })} className="w-full bg-zinc-50 border-2 border-transparent rounded-2xl px-5 py-4 pr-10 text-[12px] font-black outline-none focus:bg-white focus:border-black appearance-none transition-all shadow-sm">
                                         {linkingOptions.map(opt => <option key={opt.id} value={opt.id}>{opt.name}</option>)}
                                     </select>
                                     <Briefcase size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
@@ -232,7 +237,7 @@ export const AIToolsManager: React.FC = () => {
                             <div className="space-y-2">
                                 <label className="text-[11px] font-black text-zinc-400 uppercase tracking-tight text-center">Responsável</label>
                                 <div className="relative">
-                                    <select value={newOwner} onKeyDown={(e) => handleKeyDown(e, handleAdd)} onChange={(e) => setNewOwner(e.target.value)} className="w-full bg-zinc-50 border-2 border-transparent rounded-2xl px-5 py-4 pr-10 text-[12px] font-black outline-none focus:bg-white focus:border-black appearance-none transition-all shadow-sm text-center">
+                                    <select value={toolDraft.owner} onKeyDown={(e) => handleKeyDown(e, handleAdd)} onChange={(e) => setToolDraft({ ...toolDraft, owner: e.target.value })} className="w-full bg-zinc-50 border-2 border-transparent rounded-2xl px-5 py-4 pr-10 text-[12px] font-black outline-none focus:bg-white focus:border-black appearance-none transition-all shadow-sm text-center">
                                         {responsibleOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                                     </select>
                                     <UserCircle size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
@@ -243,11 +248,11 @@ export const AIToolsManager: React.FC = () => {
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <label className="text-[11px] font-black text-zinc-400 uppercase tracking-tight">Valor Mensal</label>
-                                <input type="text" value={newValue} onKeyDown={(e) => handleKeyDown(e, handleAdd)} onChange={e => setNewValue(formatCurrencyInput(e.target.value))} placeholder="R$ 0,00" className="w-full bg-zinc-50 border-2 border-transparent rounded-2xl px-5 py-4 text-base font-black focus:bg-white focus:border-black outline-none transition-all shadow-sm" />
+                                <input type="text" value={toolDraft.value} onKeyDown={(e) => handleKeyDown(e, handleAdd)} onChange={e => setToolDraft({ ...toolDraft, value: formatCurrencyInput(e.target.value) })} placeholder="R$ 0,00" className="w-full bg-zinc-50 border-2 border-transparent rounded-2xl px-5 py-4 text-base font-black focus:bg-white focus:border-black outline-none transition-all shadow-sm" />
                             </div>
                             <div className="space-y-2">
                                 <label className="text-[11px] font-black text-zinc-400 uppercase tracking-tight text-center">Dia Venc.</label>
-                                <input type="text" value={newDate} onKeyDown={(e) => handleKeyDown(e, handleAdd)} onChange={e => setNewDate(e.target.value.replace(/\D/g, ''))} placeholder="15" className="w-full bg-zinc-50 border-2 border-transparent rounded-2xl px-5 py-4 text-base font-black text-center focus:bg-white focus:border-black outline-none transition-all shadow-sm" />
+                                <input type="text" value={toolDraft.dueDate} onKeyDown={(e) => handleKeyDown(e, handleAdd)} onChange={e => setToolDraft({ ...toolDraft, dueDate: e.target.value.replace(/\D/g, '') })} placeholder="15" className="w-full bg-zinc-50 border-2 border-transparent rounded-2xl px-5 py-4 text-base font-black text-center focus:bg-white focus:border-black outline-none transition-all shadow-sm" />
                             </div>
                         </div>
 

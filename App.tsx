@@ -13,6 +13,7 @@ import { useFirestoreDocument } from './hooks/useFirestore';
 import { GLOBAL_SETTINGS_ID } from './constants';
 import { ToastProvider, useToast } from './context/ToastContext';
 import { compressImage } from './services/utils';
+import { useLocalStorageState } from './hooks/useLocalStorage';
 
 type View = 'dashboard' | 'meetings' | 'ai-tools' | 'partnership' | 'balance' | 'expenses';
 
@@ -22,18 +23,18 @@ function AppContent() {
   const logoInputRef = useRef<HTMLInputElement>(null);
   const { alerts: activeAlerts } = useNotifications();
   const { addToast } = useToast();
+  const [currentView, setStoredCurrentView] = useLocalStorageState<View>('carryon:app:last-view', 'dashboard');
 
   const { data: settings, setDocument: updateSettings } = useFirestoreDocument(
       'settings', 
       GLOBAL_SETTINGS_ID, 
-      { lastView: 'dashboard', appLogo: '/logo.svg' }
+      { appLogo: '/logo.svg' }
   );
 
-  const currentView = (settings as any)?.lastView || 'dashboard';
   const appLogo = (settings as any)?.appLogo || '/logo.svg';
 
   const setCurrentView = (view: View) => {
-      updateSettings({ lastView: view });
+      setStoredCurrentView(view);
       window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 

@@ -5,24 +5,21 @@ import { formatCurrency, extractDominantColor, compressImage, formatCurrencyInpu
 import { Target, Plus, X, Upload, Trash2, MessageCircle, ExternalLink, Check, Navigation, Loader2, Search } from 'lucide-react';
 import { useFirestoreCollection } from '../hooks/useFirestore';
 import { useToast } from '../context/ToastContext';
+import { useLocalStorageState } from '../hooks/useLocalStorage';
 
 export const Dashboard: React.FC = () => {
   const { data: projects, loading, addItem, updateItem, deleteItem } = useFirestoreCollection<Project>('projects');
   const { addToast } = useToast();
+  const emptyProjectDraft = { name: '', cnpj: '', supervisor: '', contact: '', startDate: '', value: '' };
   
-  const [isAdding, setIsAdding] = useState(false);
+  const [isAdding, setIsAdding, clearIsAdding] = useLocalStorageState<boolean>('carryon:draft:dashboard:isAdding', false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   
   const [searchTerm, setSearchTerm] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  const [newName, setNewName] = useState('');
-  const [newCNPJ, setNewCNPJ] = useState('');
-  const [newSupervisor, setNewSupervisor] = useState('');
-  const [newContact, setNewContact] = useState('');
-  const [newStartDate, setNewStartDate] = useState('');
-  const [newVal, setNewVal] = useState('');
+  const [projectDraft, setProjectDraft, clearProjectDraft] = useLocalStorageState('carryon:draft:dashboard:new-project', emptyProjectDraft);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -31,14 +28,14 @@ export const Dashboard: React.FC = () => {
 
     try {
         const newProject: any = {
-            nome: newName || 'Empresa Sem Nome',
-            cnpj: newCNPJ || 'Não informado',
+            nome: projectDraft.name || 'Empresa Sem Nome',
+            cnpj: projectDraft.cnpj || 'Não informado',
             status: 'EM TREINAMENTO',
-            dataStart: newStartDate || new Date().toISOString(),
+            dataStart: projectDraft.startDate || new Date().toISOString(),
             diaMensalidade: 5,
-            supervisorName: newSupervisor || '',
-            supervisorContact: newContact || '',
-            valorContrato: parseCurrencyInput(newVal),
+            supervisorName: projectDraft.supervisor || '',
+            supervisorContact: projectDraft.contact || '',
+            valorContrato: parseCurrencyInput(projectDraft.value),
             brandColor: '#000000',
             address: '',
             createdAt: new Date().toISOString()
@@ -57,7 +54,8 @@ export const Dashboard: React.FC = () => {
   };
 
   const resetForm = () => {
-    setNewName(''); setNewCNPJ(''); setNewSupervisor(''); setNewContact(''); setNewStartDate(''); setNewVal('');
+    clearProjectDraft();
+    clearIsAdding();
   };
 
   const handleDeleteProject = async (id: string, e: React.MouseEvent) => {
@@ -281,9 +279,9 @@ export const Dashboard: React.FC = () => {
             <div className="flex flex-col gap-4">
                 <input 
                     type="text" 
-                    value={newName} 
+                    value={projectDraft.name} 
                     onKeyDown={(e) => handleKeyDown(e, handleAddProject)}
-                    onChange={e => setNewName(e.target.value)} 
+                    onChange={e => setProjectDraft({ ...projectDraft, name: e.target.value })} 
                     placeholder="Nome da Empresa" 
                     className="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 text-black font-bold focus:ring-2 focus:ring-black outline-none transition-all text-sm" 
                 />

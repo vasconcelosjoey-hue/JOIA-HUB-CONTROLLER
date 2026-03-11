@@ -5,21 +5,24 @@ import { formatCurrency, formatCurrencyInput, parseCurrencyInput } from '../serv
 import { useFirestoreCollection } from '../hooks/useFirestore';
 import { Expense } from '../types';
 import { useToast } from '../context/ToastContext';
+import { useLocalStorageState } from '../hooks/useLocalStorage';
 
 export const ExpensesManager: React.FC = () => {
     const { data: expenses, loading, addItem, updateItem, deleteItem } = useFirestoreCollection<Expense>('expenses');
     const { addToast } = useToast();
+    const emptyExpenseDraft = {
+        category: 'AVULSA',
+        title: '',
+        description: '',
+        value: '',
+    };
 
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
     const [editValueStr, setEditValueStr] = useState('');
-    
-    const [category, setCategory] = useState('AVULSA');
-    const [title, setTitle] = useState('');
-    const [description, setDescription] = useState('');
-    const [value, setValue] = useState('');
+    const [expenseDraft, setExpenseDraft, clearExpenseDraft] = useLocalStorageState('carryon:draft:expenses:new-expense', emptyExpenseDraft);
 
     const categories = [
         { id: 'AVULSA', label: 'Avulsa', icon: Sparkles },
@@ -69,11 +72,11 @@ export const ExpensesManager: React.FC = () => {
     const isSearching = searchTerm.trim().length > 0;
 
     const handleAdd = async () => {
-        if (!title) {
+        if (!expenseDraft.title) {
             addToast('Dê um nome para a despesa.', 'warning');
             return;
         }
-        if (!value || parseCurrencyInput(value) <= 0) {
+        if (!expenseDraft.value || parseCurrencyInput(expenseDraft.value) <= 0) {
             addToast('Insira um valor válido.', 'warning');
             return;
         }
@@ -81,18 +84,16 @@ export const ExpensesManager: React.FC = () => {
         setIsSubmitting(true);
         try {
             const newExpense: Omit<Expense, 'id'> = {
-                title: title.trim(),
-                category,
-                description: description.trim() || category,
-                value: parseCurrencyInput(value),
+                title: expenseDraft.title.trim(),
+                category: expenseDraft.category,
+                description: expenseDraft.description.trim() || expenseDraft.category,
+                value: parseCurrencyInput(expenseDraft.value),
                 timestamp: new Date().toISOString(),
                 createdAt: new Date().toISOString()
             };
             await addItem(newExpense);
             addToast('Despesa registrada!', 'success');
-            setTitle('');
-            setDescription('');
-            setValue('');
+            clearExpenseDraft();
         } catch (err) {
             addToast('Erro ao salvar despesa.', 'error');
         } finally {
@@ -196,7 +197,7 @@ export const ExpensesManager: React.FC = () => {
                         <div className="space-y-2">
                             <label className="text-[11px] font-black text-zinc-500 uppercase tracking-tight">Nome / Pessoa</label>
                             <div className="relative">
-                                <input type="text" value={title} onChange={e => setTitle(e.target.value)} placeholder="Ex: Igor" className="w-full bg-zinc-50 border-2 border-transparent rounded-2xl pl-12 pr-5 py-4 text-base font-black focus:bg-white focus:border-black outline-none transition-all shadow-sm placeholder:text-zinc-300" />
+                            <input type="text" value={expenseDraft.title} onChange={e => setExpenseDraft({ ...expenseDraft, title: e.target.value })} placeholder="Ex: Igor" className="w-full bg-zinc-50 border-2 border-transparent rounded-2xl pl-12 pr-5 py-4 text-base font-black focus:bg-white focus:border-black outline-none transition-all shadow-sm placeholder:text-zinc-300" />
                                 <UserCircle size={22} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-300" />
                             </div>
                         </div>
@@ -205,7 +206,7 @@ export const ExpensesManager: React.FC = () => {
                             <label className="text-[11px] font-black text-zinc-500 uppercase tracking-tight">Categoria</label>
                             <div className="grid grid-cols-3 gap-2.5">
                                 {categories.map(cat => (
-                                    <button key={cat.id} onClick={() => setCategory(cat.id)} className={`p-3 rounded-2xl border-2 flex flex-col items-center justify-center transition-all min-h-[75px] ${category === cat.id ? 'bg-black text-white border-black shadow-lg scale-105' : 'bg-zinc-50 border-transparent text-zinc-400 hover:border-zinc-200'}`}>
+                                    <button key={cat.id} onClick={() => setExpenseDraft({ ...expenseDraft, category: cat.id })} className={`p-3 rounded-2xl border-2 flex flex-col items-center justify-center transition-all min-h-[75px] ${expenseDraft.category === cat.id ? 'bg-black text-white border-black shadow-lg scale-105' : 'bg-zinc-50 border-transparent text-zinc-400 hover:border-zinc-200'}`}>
                                         <cat.icon size={22} />
                                         <span className="text-[9px] font-black uppercase mt-1.5 tracking-tighter">{cat.label}</span>
                                     </button>
@@ -215,12 +216,12 @@ export const ExpensesManager: React.FC = () => {
 
                         <div className="space-y-2">
                             <label className="text-[11px] font-black text-zinc-500 uppercase tracking-tight">Breve Descrição</label>
-                            <input type="text" value={description} onChange={e => setDescription(e.target.value)} placeholder="Ex: Almoço Reunião Alpha" className="w-full bg-zinc-50 border-2 border-transparent rounded-2xl px-5 py-4 text-sm font-bold focus:bg-white focus:border-black outline-none transition-all shadow-sm placeholder:text-zinc-300" />
+                            <input type="text" value={expenseDraft.description} onChange={e => setExpenseDraft({ ...expenseDraft, description: e.target.value })} placeholder="Ex: Almoço Reunião Alpha" className="w-full bg-zinc-50 border-2 border-transparent rounded-2xl px-5 py-4 text-sm font-bold focus:bg-white focus:border-black outline-none transition-all shadow-sm placeholder:text-zinc-300" />
                         </div>
 
                         <div className="space-y-2">
                             <label className="text-[11px] font-black text-zinc-500 uppercase tracking-tight">Valor R$</label>
-                            <input type="text" value={value} onChange={e => setValue(formatCurrencyInput(e.target.value))} placeholder="R$ 0,00" className="w-full bg-zinc-50 border-2 border-transparent rounded-2xl px-5 py-4 text-lg font-black focus:bg-white focus:border-black outline-none transition-all shadow-sm" />
+                            <input type="text" value={expenseDraft.value} onChange={e => setExpenseDraft({ ...expenseDraft, value: formatCurrencyInput(e.target.value) })} placeholder="R$ 0,00" className="w-full bg-zinc-50 border-2 border-transparent rounded-2xl px-5 py-4 text-lg font-black focus:bg-white focus:border-black outline-none transition-all shadow-sm" />
                         </div>
 
                         <button onClick={handleAdd} disabled={isSubmitting} className="w-full bg-black text-white py-5 rounded-[1.5rem] font-black text-xs uppercase tracking-[0.2em] flex items-center justify-center gap-3 shadow-2xl hover:bg-zinc-800 transition-all disabled:opacity-50 active:scale-[0.98] mt-4">
